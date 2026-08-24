@@ -9,6 +9,7 @@ import {
   integer,
   doublePrecision,
 } from "drizzle-orm/pg-core";
+import { organizations, users } from "./schema-auth";
 
 // Internal = full MoM with action items + task creation.
 // Client   = summary + MoM only, no action items / no tasks.
@@ -34,12 +35,14 @@ export const meetings = pgTable("meetings", {
   // Orbit SSO owner. The portal user id of whoever created this meeting. A
   // regular user only sees meetings they created; a superadmin sees all. NULL =
   // unowned (legacy rows) → superadmin-only. hostName holds the display name.
-  createdByUserId: uuid("created_by_user_id"),
+  createdByUserId: uuid("created_by_user_id").references(() => users.id, {
+    onDelete: "set null",
+  }),
   // The organization this meeting belongs to. This is the wall between one
   // customer's meetings and another's — every query that lists or opens a
-  // meeting filters on it. Nullable only so the column can be introduced; the
-  // create path always sets it.
-  orgId: uuid("org_id"),
+  // meeting filters on it. Deleting an org cascades its meetings away rather
+  // than orphaning them (and their stored recordings).
+  orgId: uuid("org_id").references(() => organizations.id, { onDelete: "cascade" }),
   meetingDate: timestamp("meeting_date", { withTimezone: true }),
   invitees: jsonb("invitees").$type<Invitee[]>(), // manual participant list (Bitrix later)
   recordingPath: text("recording_path"),
