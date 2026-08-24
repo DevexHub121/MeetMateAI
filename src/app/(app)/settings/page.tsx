@@ -1,16 +1,15 @@
-import { requireSuperadmin } from "@/lib/auth";
+import { requireOrgAdmin } from "@/lib/auth";
 import { BOT_NAME_MAX, getBotName } from "@/lib/settings";
 import { notetakerVideoOutput } from "@/lib/notetakerTile";
 import { NotetakerSettings } from "./NotetakerSettings";
 
-// Instance-wide settings, so superadmin only. requireSuperadmin() sends anyone
-// else home; the server action re-checks, since rendering the page is not what
-// grants permission.
+// Org settings — an org admin (or platform owner) only. The server action
+// re-checks, since rendering the page is not what grants permission.
 export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
-  await requireSuperadmin();
-  const botName = await getBotName();
+  const user = await requireOrgAdmin();
+  const botName = await getBotName(user.org?.id);
 
   return (
     <div>
@@ -19,7 +18,7 @@ export default async function SettingsPage() {
           Settings
         </h1>
         <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
-          Applies to everyone using Echo.
+          Applies to everyone in your workspace.
         </p>
       </div>
 

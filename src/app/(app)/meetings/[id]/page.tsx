@@ -330,7 +330,7 @@ export default async function MeetingPage({
               <div className="min-w-0">
                 <h2 className="flex items-center gap-2 text-sm font-semibold text-violet-200">
                   <span className="h-2 w-2 animate-pulse rounded-full bg-violet-300" />
-                  Echo Notetaker is {botLabel}
+                  Notti is {botLabel}
                 </h2>
                 <p className="mt-1 text-sm text-violet-300/80">
                   It leaves on its own a couple of seconds after the last person

@@ -11,7 +11,7 @@ import type { Invitee, Minutes } from "@/db/schema";
 // runs in local dev.
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
-const EMAIL_FROM = process.env.EMAIL_FROM ?? "Echo <onboarding@resend.dev>";
+const EMAIL_FROM = process.env.EMAIL_FROM ?? "Notti <onboarding@resend.dev>";
 const APP_URL = (process.env.APP_URL ?? "http://localhost:3000").replace(
   /\/$/,
   "",
@@ -179,7 +179,7 @@ function buildIcs(meeting: {
   return [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//Echo//MoM//EN",
+    "PRODID:-//Notti//Meeting//EN",
     "METHOD:REQUEST",
     "BEGIN:VEVENT",
     `UID:${meeting.id}@echo`,
@@ -187,7 +187,7 @@ function buildIcs(meeting: {
     `DTSTART:${fmt(start)}`,
     `DTEND:${fmt(end)}`,
     `SUMMARY:${icsEscape(meeting.title)}`,
-    `DESCRIPTION:${icsEscape(`Join in Echo: ${APP_URL}/meetings/${meeting.id}`)}`,
+    `DESCRIPTION:${icsEscape(`Join in Notti: ${APP_URL}/meetings/${meeting.id}`)}`,
     `URL:${APP_URL}/meetings/${meeting.id}`,
     "END:VEVENT",
     "END:VCALENDAR",
@@ -224,7 +224,7 @@ function renderInviteHtml(
       <p style="margin:0 0 10px"><strong>When:</strong> ${esc(dateStr)} (IST)</p>
       ${who ? `<p style="margin:0 0 10px"><strong>Participants:</strong> ${who}</p>` : ""}
       <p style="margin:14px 0">
-        <a href="${link}" style="display:inline-block;background:#4f46e5;color:#fff;text-decoration:none;padding:10px 18px;border-radius:8px;font-weight:600">Open in Echo</a>
+        <a href="${link}" style="display:inline-block;background:#4f46e5;color:#fff;text-decoration:none;padding:10px 18px;border-radius:8px;font-weight:600">Open in Notti</a>
       </p>
       <p style="color:#6b7280;font-size:13px;margin:8px 0 0">A calendar invite (.ics) is attached. You'll receive the minutes here automatically once the meeting is recorded and analyzed.</p>
     </div>

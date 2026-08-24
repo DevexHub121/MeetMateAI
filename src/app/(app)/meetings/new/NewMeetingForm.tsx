@@ -513,7 +513,7 @@ export function NewMeetingForm({
             Send an AI note-taker to a Meet or Zoom call
           </h3>
           <p className="mb-3 text-xs text-[var(--color-text-muted)]">
-            Echo joins the call as “Echo Notetaker”, records it, then produces the
+            Notti joins the call as your note-taker, records it, then produces the
             transcript and minutes automatically. Uses the participants and type
             above.
           </p>

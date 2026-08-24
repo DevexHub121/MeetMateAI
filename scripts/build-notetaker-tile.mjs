@@ -32,20 +32,17 @@ const H = 1440;
 const CHROME =
   "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 
-/** The Echo mark from src/app/icon.svg, without the rounded-tile background. */
+/** The Notti mark (src/components/NottiMark.tsx): a note card with a voice
+ *  soundwave, without the tile background. */
 const MARK = `
-<svg viewBox="0 0 64 64" width="440" height="440" fill="none"
+<svg viewBox="0 0 64 64" width="420" height="420" fill="none"
      xmlns="http://www.w3.org/2000/svg">
-  <g fill="none" stroke="#f4f4f2" stroke-width="3.2">
-    <circle cx="22.5" cy="32" r="12.5"/>
-    <circle cx="41.5" cy="32" r="12.5"/>
-  </g>
-  <line x1="14.5" y1="32" x2="29" y2="32" stroke="#f4f4f2"
-        stroke-width="3.4" stroke-linecap="round"/>
-  <g stroke="#f4f4f2" stroke-width="3" stroke-linecap="round">
-    <line x1="37.3" y1="28.5" x2="37.3" y2="35.5"/>
-    <line x1="41.5" y1="24"   x2="41.5" y2="40"/>
-    <line x1="45.7" y1="27"   x2="45.7" y2="37"/>
+  <rect x="12" y="10" width="40" height="44" rx="10"
+        stroke="#f4f4f2" stroke-width="3.2"/>
+  <g stroke="#f4f4f2" stroke-width="3.2" stroke-linecap="round">
+    <line x1="24" y1="28" x2="24" y2="36"/>
+    <line x1="32" y1="22" x2="32" y2="42"/>
+    <line x1="40" y1="26" x2="40" y2="38"/>
   </g>
 </svg>`;
 
@@ -149,7 +146,7 @@ function page({ status, dotColor }) {
   <div class="grain"></div>
   <div class="stack">
     <div class="mark">${MARK}</div>
-    <div class="word">Echo</div>
+    <div class="word">Notti</div>
     <div class="status"><span class="dot"></span>${status}</div>
   </div>
 </body></html>`;

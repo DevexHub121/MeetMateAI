@@ -81,7 +81,7 @@ export function StartMeeting({
         {retry ? "Try the note-taker again" : "Start the meeting"}
       </h2>
       <p className="mb-4 text-xs text-[var(--color-text-muted)]">
-        Echo joins the {valid ? platformName(link) : "call"} as its own
+        Notti joins the {valid ? platformName(link) : "call"} as its own
         participant and records the whole thing — no screen sharing, and nothing
         running on this device. Someone in the call has to admit it, the same as
         any other guest.

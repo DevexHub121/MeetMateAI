@@ -1,6 +1,6 @@
 import "server-only";
 import { db } from "@/db";
-import { appSettings } from "@/db/schema";
+import { orgSettings } from "@/db/schema";
 import { eq, sql } from "drizzle-orm";
 
 /**
@@ -16,13 +16,11 @@ import { eq, sql } from "drizzle-orm";
  * built-in default.
  */
 
-export const DEFAULT_BOT_NAME = "Echo Notetaker";
+export const DEFAULT_BOT_NAME = "Notti";
 
 /** Meeting platforms truncate long names in the participant tile, and Recall
  *  rejects the extremes outright. Short enough to survive both. */
 export const BOT_NAME_MAX = 48;
-
-const KEY_BOT_NAME = "bot_name";
 
 function envBotName(): string {
   return process.env.RECALL_BOT_NAME?.trim() || DEFAULT_BOT_NAME;
@@ -46,45 +44,38 @@ export function normalizeBotName(input: string): string | null {
   return cleaned.length ? cleaned : null;
 }
 
-async function readSetting(key: string): Promise<string | null> {
-  const [row] = await db
-    .select({ value: appSettings.value })
-    .from(appSettings)
-    .where(eq(appSettings.key, key))
-    .limit(1);
-  return row?.value ?? null;
-}
-
 /**
- * The name the bot joins under.
+ * The name the bot joins under, for one organization.
  *
- * Deliberately never throws. This is called on the path that dispatches a bot
- * into a live meeting, and a settings lookup failing is not a good reason to
- * fail the recording — falling back to the env/default name is strictly better
- * than not recording the call.
+ * Per-org, because in a multi-tenant product each customer names their own
+ * note-taker — one company's "Acme Notes" must not become another's bot name.
+ * Deliberately never throws: this is on the path that dispatches a bot into a
+ * live meeting, and a settings lookup failing is no reason to fail the
+ * recording — the env/default name is strictly better than not recording.
  */
-export async function getBotName(): Promise<string> {
+export async function getBotName(orgId?: string | null): Promise<string> {
+  if (!orgId) return envBotName();
   try {
-    const stored = await readSetting(KEY_BOT_NAME);
-    if (stored) return normalizeBotName(stored) ?? envBotName();
+    const [row] = await db
+      .select({ botName: orgSettings.botName })
+      .from(orgSettings)
+      .where(eq(orgSettings.orgId, orgId))
+      .limit(1);
+    if (row?.botName) return normalizeBotName(row.botName) ?? envBotName();
   } catch (err) {
     console.warn("[settings] could not read bot name, using default:", err);
   }
   return envBotName();
 }
 
-export async function setBotName(name: string, userId: string | null): Promise<void> {
+export async function setBotName(orgId: string, name: string): Promise<void> {
   const clean = normalizeBotName(name);
   if (!clean) throw new Error("Bot name cannot be empty");
   await db
-    .insert(appSettings)
-    .values({ key: KEY_BOT_NAME, value: clean, updatedByUserId: userId })
+    .insert(orgSettings)
+    .values({ orgId, botName: clean })
     .onConflictDoUpdate({
-      target: appSettings.key,
-      set: {
-        value: sql`excluded.value`,
-        updatedAt: sql`now()`,
-        updatedByUserId: sql`excluded.updated_by_user_id`,
-      },
+      target: orgSettings.orgId,
+      set: { botName: clean, updatedAt: sql`now()` },
     });
 }

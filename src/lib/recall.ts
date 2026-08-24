@@ -68,11 +68,13 @@ export async function createMeetingBot(opts: {
   meetingUrl: string;
   meetingId: string;
   botName?: string;
+  /** The organization the meeting belongs to — picks the per-org bot name. */
+  orgId?: string | null;
 }): Promise<RecallBot> {
   // Both of these are cosmetic — how the bot is named and what it shows as its
   // camera — and neither is worth failing a recording over, so both resolve to
   // a safe default rather than throwing.
-  const botName = opts.botName || (await getBotName());
+  const botName = opts.botName || (await getBotName(opts.orgId));
   const camera = notetakerVideoOutput();
 
   const res = await recallFetch("/api/v1/bot/", {

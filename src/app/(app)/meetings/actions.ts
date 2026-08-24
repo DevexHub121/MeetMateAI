@@ -624,7 +624,7 @@ export async function sendNoteTaker(meetingId: string, meetingUrl: string) {
   // which is the whole point — the label being briefly wrong is precisely when
   // someone clicks the button a second time.
   const [existing] = await db
-    .select({ botStatus: meetings.botStatus })
+    .select({ botStatus: meetings.botStatus, orgId: meetings.orgId })
     .from(meetings)
     .where(eq(meetings.id, meetingId))
     .limit(1);
@@ -633,7 +633,7 @@ export async function sendNoteTaker(meetingId: string, meetingUrl: string) {
     return;
   }
 
-  const bot = await createMeetingBot({ meetingUrl: url, meetingId });
+  const bot = await createMeetingBot({ meetingUrl: url, meetingId, orgId: existing?.orgId ?? null });
   await createRecordingSession({ meetingId, botId: bot.id });
 
   await db

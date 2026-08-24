@@ -19,17 +19,16 @@ export function HeaderNav({
 }) {
   const [open, setOpen] = useState(false);
   const close = () => setOpen(false);
-  // Settings are instance-wide (the note-taker's name), so only a superadmin
-  // gets the link. The page enforces this too — this just keeps a door nobody
-  // can open out of everyone else's way.
-  const canManageSettings = user.role === "superadmin";
+  // Settings are org-level (the note-taker's name, allowed domains), so an org
+  // admin or a platform owner gets the link. The page enforces this too.
+  const canManageSettings = user.role === "superadmin" || user.org?.roleKey === "admin";
 
   return (
     <>
       {/* Desktop nav */}
       <nav className="hidden items-center gap-1 text-sm md:flex">
         <NavLink href="/meetings">Meetings</NavLink>
-        <NavLink href="/employees">Employees</NavLink>
+        <NavLink href="/team">Team</NavLink>
         {canManageSettings && <NavLink href="/settings">Settings</NavLink>}
         <Link href="/meetings/new" className="btn-primary ml-1 px-3.5 py-1.5">
           <span className="text-base leading-none">+</span> New meeting
@@ -70,8 +69,8 @@ export function HeaderNav({
             <NavLink href="/meetings" onClick={close} className="py-2">
               Meetings
             </NavLink>
-            <NavLink href="/employees" onClick={close} className="py-2">
-              Employees
+            <NavLink href="/team" onClick={close} className="py-2">
+              Team
             </NavLink>
             {canManageSettings && (
               <NavLink href="/settings" onClick={close} className="py-2">

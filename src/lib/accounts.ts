@@ -285,3 +285,45 @@ export async function listMembers(orgId: string) {
     .where(eq(orgMembers.orgId, orgId))
     .orderBy(sql`${orgMembers.role} asc, ${users.name} asc`);
 }
+
+
+// ── Member administration ─────────────────────────────────────────────────────
+
+/** How many active admins an org has — used to refuse removing the last one. */
+export async function countActiveAdmins(orgId: string): Promise<number> {
+  const rows = await db
+    .select({ id: orgMembers.id })
+    .from(orgMembers)
+    .where(and(eq(orgMembers.orgId, orgId), eq(orgMembers.role, "admin"), eq(orgMembers.status, "active")));
+  return rows.length;
+}
+
+async function memberRole(orgId: string, userId: string): Promise<{ role: string; status: string } | null> {
+  const rows = await db
+    .select({ role: orgMembers.role, status: orgMembers.status })
+    .from(orgMembers)
+    .where(and(eq(orgMembers.orgId, orgId), eq(orgMembers.userId, userId)))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
+export async function setMemberRole(orgId: string, userId: string, role: "admin" | "member"): Promise<void> {
+  // Don't strip the last admin — an org with no admin can't be administered.
+  if (role === "member") {
+    const cur = await memberRole(orgId, userId);
+    if (cur?.role === "admin" && (await countActiveAdmins(orgId)) <= 1) {
+      throw new Error("This is the only admin — make someone else an admin first");
+    }
+  }
+  await db.update(orgMembers).set({ role }).where(and(eq(orgMembers.orgId, orgId), eq(orgMembers.userId, userId)));
+}
+
+export async function setMemberStatus(orgId: string, userId: string, status: "active" | "suspended"): Promise<void> {
+  if (status === "suspended") {
+    const cur = await memberRole(orgId, userId);
+    if (cur?.role === "admin" && (await countActiveAdmins(orgId)) <= 1) {
+      throw new Error("This is the only admin — make someone else an admin first");
+    }
+  }
+  await db.update(orgMembers).set({ status }).where(and(eq(orgMembers.orgId, orgId), eq(orgMembers.userId, userId)));
+}
