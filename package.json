@@ -1,0 +1,45 @@
+{
+  "name": "notti",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1069.0",
+    "@aws-sdk/s3-request-presigner": "^3.1086.0",
+    "@deepgram/sdk": "^5.4.0",
+    "@neondatabase/serverless": "^1.1.0",
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/nodemailer": "^8.0.1",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "clsx": "^2.1.1",
+    "drizzle-orm": "^0.45.2",
+    "next": "16.2.9",
+    "nodemailer": "^9.0.3",
+    "openai": "^6.42.0",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "tailwind-merge": "^3.6.0",
+    "tailwindcss": "^4",
+    "typescript": "^5",
+    "bcryptjs": "^3.0.2",
+    "server-only": "^0.0.1",
+    "@types/bcryptjs": "^2.4.6"
+  },
+  "devDependencies": {
+    "dotenv": "^17.4.2",
+    "drizzle-kit": "^0.31.10",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.9"
+  }
+}

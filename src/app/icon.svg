@@ -1,0 +1,26 @@
+<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#242424"/>
+      <stop offset="1" stop-color="#171717"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="url(#tile)"/>
+  <rect x="0.75" y="0.75" width="62.5" height="62.5" rx="13.25" fill="none" stroke="#ffffff" stroke-opacity="0.09"/>
+
+  <!-- linked "echo" rings -->
+  <g fill="none" stroke="#f4f4f2" stroke-width="3.2">
+    <circle cx="22.5" cy="32" r="12.5"/>
+    <circle cx="41.5" cy="32" r="12.5"/>
+  </g>
+
+  <!-- E crossbar in the left ring -->
+  <line x1="14.5" y1="32" x2="29" y2="32" stroke="#f4f4f2" stroke-width="3.4" stroke-linecap="round"/>
+
+  <!-- voice / soundwave in the right ring -->
+  <g stroke="#f4f4f2" stroke-width="3" stroke-linecap="round">
+    <line x1="37.3" y1="28.5" x2="37.3" y2="35.5"/>
+    <line x1="41.5" y1="24"   x2="41.5" y2="40"/>
+    <line x1="45.7" y1="27"   x2="45.7" y2="37"/>
+  </g>
+</svg>
