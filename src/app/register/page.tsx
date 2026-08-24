@@ -19,7 +19,7 @@ export default async function RegisterPage({
       footer={
         <>
           Already have an account?{" "}
-          <Link href="/login" className="text-[var(--color-heading)] underline underline-offset-2">
+          <Link href="/login" className="font-semibold text-[var(--l-accent)] hover:underline">
             Sign in
           </Link>
         </>
@@ -27,7 +27,7 @@ export default async function RegisterPage({
     >
       <form action={startRegistration} className="space-y-4">
         {error && (
-          <p className="rounded-lg border border-red-500/25 bg-red-500/[0.07] px-3 py-2 text-sm text-red-300">
+          <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
             {error}
           </p>
         )}
@@ -36,7 +36,7 @@ export default async function RegisterPage({
         <Field label="Company / workspace name" name="orgName" type="text" required placeholder="Acme Inc." />
         <Field label="Workspace URL (optional)" name="orgSlug" type="text" placeholder="acme" />
         <Field label="Password" name="password" type="password" required minLength={8} autoComplete="new-password" placeholder="At least 8 characters" />
-        <button type="submit" className="btn-primary w-full justify-center px-4 py-2.5 text-sm">
+        <button type="submit" className="l-btn-primary w-full px-4 py-2.5 text-sm">
           Create workspace
         </button>
         <p className="text-center text-xs text-[var(--color-text-muted)]">

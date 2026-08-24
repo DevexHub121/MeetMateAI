@@ -24,7 +24,7 @@ export default async function LoginPage({
       footer={
         <>
           New here?{" "}
-          <Link href="/register" className="text-[var(--color-heading)] underline underline-offset-2">
+          <Link href="/register" className="font-semibold text-[var(--l-accent)] hover:underline">
             Create a workspace
           </Link>
         </>
@@ -33,13 +33,13 @@ export default async function LoginPage({
       <form action={login} className="space-y-4">
         {next && <input type="hidden" name="next" value={next} />}
         {error && ERRORS[error] && (
-          <p className="rounded-lg border border-red-500/25 bg-red-500/[0.07] px-3 py-2 text-sm text-red-300">
+          <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
             {ERRORS[error]}
           </p>
         )}
         <Field label="Email" name="email" type="email" required autoComplete="email" placeholder="you@company.com" />
         <Field label="Password" name="password" type="password" required autoComplete="current-password" placeholder="••••••••" />
-        <button type="submit" className="btn-primary w-full justify-center px-4 py-2.5 text-sm">
+        <button type="submit" className="l-btn-primary w-full px-4 py-2.5 text-sm">
           Sign in
         </button>
       </form>

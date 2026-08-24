@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { NottiMark } from "@/components/NottiMark";
 
-/** Centered card on the dark ground, used by every auth page. */
+/** Centered card on a light ground — matches the marketing site so the signup
+ *  flow doesn't jump from a bright landing page to a dark form. */
 export function AuthShell({
   title,
   subtitle,
@@ -14,46 +15,39 @@ export function AuthShell({
   footer?: React.ReactNode;
 }) {
   return (
-    <div className="flex min-h-screen items-center justify-center px-4 py-10">
-      <div className="w-full max-w-sm">
+    <div className="site-light relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-10">
+      <div className="aura h-[26rem] w-[26rem]" style={{ background: "#c7d2fe", top: "-6rem", left: "-4rem" }} />
+      <div className="aura h-[24rem] w-[24rem]" style={{ background: "#ddd6fe", bottom: "-6rem", right: "-4rem" }} />
+      <div className="relative w-full max-w-sm">
         <Link href="/" className="mb-8 flex items-center justify-center gap-2.5">
-          <span className="brand-gradient flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--color-border)] text-[var(--color-heading)] shadow-sm">
+          <span className="flex h-9 w-9 items-center justify-center rounded-lg text-white" style={{ background: "var(--l-grad)" }}>
             <NottiMark size={20} />
           </span>
-          <span className="font-display text-lg font-semibold tracking-tight text-[var(--color-heading)]">
-            Notti
-          </span>
+          <span className="text-lg font-bold tracking-tight text-[var(--l-heading)]">Notti</span>
         </Link>
 
-        <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm sm:p-7">
-          <h1 className="font-display text-xl font-semibold tracking-tight text-[var(--color-heading)]">
-            {title}
-          </h1>
-          {subtitle && (
-            <p className="mt-1.5 text-sm text-[var(--color-text-secondary)]">{subtitle}</p>
-          )}
+        <div className="l-card p-6 shadow-xl shadow-indigo-500/5 sm:p-7">
+          <h1 className="text-xl font-bold tracking-tight text-[var(--l-heading)]">{title}</h1>
+          {subtitle && <p className="mt-1.5 text-sm text-[var(--l-text)]">{subtitle}</p>}
           <div className="mt-6">{children}</div>
         </div>
 
-        {footer && (
-          <div className="mt-5 text-center text-sm text-[var(--color-text-muted)]">{footer}</div>
-        )}
+        {footer && <div className="mt-5 text-center text-sm text-[var(--l-muted)]">{footer}</div>}
       </div>
     </div>
   );
 }
 
-/** Shared input styling. */
 export function Field({
   label,
   ...props
 }: { label: string } & React.InputHTMLAttributes<HTMLInputElement>) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-sm font-medium text-[var(--color-heading)]">{label}</span>
+      <span className="mb-1.5 block text-sm font-semibold text-[var(--l-heading)]">{label}</span>
       <input
         {...props}
-        className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2.5 text-sm text-[var(--color-heading)] outline-none placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-border-strong)]"
+        className="w-full rounded-lg border border-[var(--l-border-strong)] bg-white px-3 py-2.5 text-sm text-[var(--l-heading)] outline-none transition-colors placeholder:text-[var(--l-muted)] focus:border-[var(--l-accent)] focus:ring-2 focus:ring-[var(--l-accent-soft)]"
       />
     </label>
   );

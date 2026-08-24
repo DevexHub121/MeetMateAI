@@ -396,3 +396,70 @@ body::after {
 @media (prefers-reduced-motion: reduce) {
   .eq-bar, .float-slow, .rise { animation: none !important; }
 }
+
+/* ─── Light marketing surface ──────────────────────────────────────
+   The app is charcoal; the public site is bright, in the register of
+   Notta and Otter — white, generous whitespace, a confident indigo
+   accent. Scoped under .site-light so it never touches the app, and
+   opaque so it covers the dark body + aurora behind it. */
+.site-light {
+  --l-bg: #ffffff;
+  --l-bg-soft: #f6f7fb;
+  --l-surface: #ffffff;
+  --l-heading: #0b1220;
+  --l-text: #4a5568;
+  --l-muted: #98a2b3;
+  --l-border: #e9ecf3;
+  --l-border-strong: #d4dae6;
+  --l-accent: #4f46e5;        /* indigo-600 */
+  --l-accent-hover: #4338ca;
+  --l-accent-2: #6366f1;
+  --l-accent-soft: #eef1ff;
+  --l-cyan: #06b6d4;
+  --l-grad: linear-gradient(120deg, #6366f1 0%, #4f46e5 55%, #7c3aed 100%);
+  --l-grad-cta: linear-gradient(120deg, #4f46e5 0%, #6d28d9 100%);
+
+  position: relative;
+  z-index: 0;
+  min-height: 100vh;
+  color: var(--l-text);
+  background: var(--l-bg);
+  font-family: var(--font-instrument), system-ui, sans-serif;
+}
+/* Soft blue-violet auras behind the light hero, very subtle. */
+.site-light .aura {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(64px);
+  opacity: 0.5;
+  pointer-events: none;
+  z-index: -1;
+}
+.site-light .l-btn-primary {
+  display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+  border-radius: 0.75rem; font-weight: 600; color: #fff;
+  background: var(--l-accent);
+  box-shadow: 0 1px 2px rgba(16,24,40,0.08), 0 8px 24px -12px rgba(79,70,229,0.6);
+  transition: background 0.15s, transform 0.15s, box-shadow 0.15s;
+}
+.site-light .l-btn-primary:hover { background: var(--l-accent-hover); transform: translateY(-1px); }
+.site-light .l-btn-ghost {
+  display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+  border-radius: 0.75rem; font-weight: 600; color: var(--l-heading);
+  background: #fff; border: 1px solid var(--l-border-strong);
+  transition: border-color 0.15s, background 0.15s, transform 0.15s;
+}
+.site-light .l-btn-ghost:hover { background: var(--l-bg-soft); transform: translateY(-1px); }
+.site-light .l-card {
+  background: var(--l-surface);
+  border: 1px solid var(--l-border);
+  border-radius: 1rem;
+  box-shadow: 0 1px 2px rgba(16,24,40,0.04);
+}
+.site-light .l-grad-text {
+  background: var(--l-grad); -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.site-light .l-eyebrow {
+  font-size: 0.75rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--l-accent);
+}

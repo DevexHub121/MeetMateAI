@@ -17,15 +17,15 @@ export default async function VerifyPage({
       <form action={verifyRegistration} className="space-y-4">
         <input type="hidden" name="token" value={token} />
         {error && (
-          <p className="rounded-lg border border-red-500/25 bg-red-500/[0.07] px-3 py-2 text-sm text-red-300">{error}</p>
+          <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>
         )}
         {resent && (
-          <p className="rounded-lg border border-emerald-500/25 bg-emerald-500/[0.07] px-3 py-2 text-sm text-emerald-300">
+          <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
             A new code is on its way.
           </p>
         )}
         {code && (
-          <p className="rounded-lg border border-[var(--color-border)] bg-[var(--color-muted-surface)] px-3 py-2 text-xs text-[var(--color-text-secondary)]">
+          <p className="rounded-lg border border-[var(--l-border)] bg-[var(--l-bg-soft)] px-3 py-2 text-xs text-[var(--l-text)]">
             Email isn&rsquo;t configured, so here&rsquo;s your code: <strong>{code}</strong>
           </p>
         )}
@@ -39,13 +39,13 @@ export default async function VerifyPage({
           defaultValue={code ?? ""}
           placeholder="123456"
         />
-        <button type="submit" className="btn-primary w-full justify-center px-4 py-2.5 text-sm">
+        <button type="submit" className="l-btn-primary w-full px-4 py-2.5 text-sm">
           Verify &amp; continue
         </button>
       </form>
       <form action={resendRegistration} className="mt-3 text-center">
         <input type="hidden" name="token" value={token} />
-        <button type="submit" className="text-xs text-[var(--color-text-muted)] underline underline-offset-2 hover:text-[var(--color-heading)]">
+        <button type="submit" className="text-xs text-[var(--l-muted)] underline underline-offset-2 hover:text-[var(--l-accent)]">
           Didn&rsquo;t get it? Resend the code
         </button>
       </form>
