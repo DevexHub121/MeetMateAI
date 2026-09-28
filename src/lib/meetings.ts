@@ -5,7 +5,7 @@ import { and, count, desc, eq, ilike, or, sql, type SQL } from "drizzle-orm";
 
 /**
  * Tenant boundary. A meeting belongs to an organization, and every member of
- * that organization can see it — that shared team view is the product. A Notti
+ * that organization can see it — that shared team view is the product. A MeetMate
  * platform owner sees across organizations for support. Nobody sees another
  * organization's meetings.
  */

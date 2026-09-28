@@ -163,7 +163,7 @@ export default async function MeetingsPage({
             No meetings yet
           </p>
           <p className="max-w-xs text-sm text-[var(--color-text-muted)]">
-            Record or import a conversation — Notti transcribes it and writes
+            Record or import a conversation — MeetMate transcribes it and writes
             clean, shareable minutes automatically.
           </p>
           <Link href="/meetings/new" className="btn-ai mt-2 px-4 py-2">

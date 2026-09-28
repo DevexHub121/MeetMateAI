@@ -1,6 +1,6 @@
-# Notti
+# MeetMate
 
-AI notes for every meeting. Notti joins your calls (Google Meet, Zoom, Teams) or
+AI notes for every meeting. MeetMate joins your calls (Google Meet, Zoom, Teams) or
 records on-device, transcribes every word with speaker attribution, and emails
 everyone the minutes — summary, decisions, action items — automatically.
 
@@ -21,7 +21,7 @@ database. No shared SSO.
    - `AUTH_SECRET` — `openssl rand -base64 32`
 2. Create the schema:
    ```bash
-   npx drizzle-kit migrate      # applies drizzle/0000_notti_init.sql
+   npx drizzle-kit migrate      # applies drizzle/0000_meetmate_init.sql
    ```
 3. `npm install && npm run dev`
 

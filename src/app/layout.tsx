@@ -24,8 +24,8 @@ const jetbrains = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Notti — AI notes for every meeting",
-  description: "Notti records, transcribes, and summarizes every meeting — so your team never takes notes again.",
+  title: "MeetMate — AI notes for every meeting",
+  description: "MeetMate records, transcribes, and summarizes every meeting — so your team never takes notes again.",
 };
 
 export default function RootLayout({

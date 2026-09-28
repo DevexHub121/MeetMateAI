@@ -53,7 +53,7 @@ export function AIPipeline({ status }: { status: MeetingStatus }) {
         </span>
         <div className="min-w-0">
           <p className="ai-shimmer-text text-sm font-semibold">
-            Notti is generating your minutes
+            MeetMate is generating your minutes
           </p>
           <p className="mt-0.5 text-xs text-[var(--color-text-muted)]">
             Updates live — this usually takes under a minute.

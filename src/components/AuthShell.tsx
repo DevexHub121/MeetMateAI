@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { NottiMark } from "@/components/NottiMark";
+import { MeetMateMark } from "@/components/MeetMateMark";
 
 /** Centered card on a light ground — matches the marketing site so the signup
  *  flow doesn't jump from a bright landing page to a dark form. */
@@ -21,9 +21,9 @@ export function AuthShell({
       <div className="relative w-full max-w-sm">
         <Link href="/" className="mb-8 flex items-center justify-center gap-2.5">
           <span className="flex h-9 w-9 items-center justify-center rounded-lg text-white" style={{ background: "var(--l-grad)" }}>
-            <NottiMark size={20} />
+            <MeetMateMark size={20} />
           </span>
-          <span className="text-lg font-bold tracking-tight text-[var(--l-heading)]">Notti</span>
+          <span className="text-lg font-bold tracking-tight text-[var(--l-heading)]">MeetMate</span>
         </Link>
 
         <div className="l-card p-6 shadow-xl shadow-indigo-500/5 sm:p-7">

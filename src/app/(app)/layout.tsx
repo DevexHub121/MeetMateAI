@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { HeaderNav } from "@/components/HeaderNav";
-import { NottiMark } from "@/components/NottiMark";
+import { MeetMateMark } from "@/components/MeetMateMark";
 import { VoiceTrainingPrompt } from "@/components/VoiceTrainingPrompt";
 import { hasVoiceProfile } from "@/lib/voiceProfiles";
 import { RecordingSessionProvider } from "@/components/RecordingSession";
@@ -29,11 +29,11 @@ export default async function AppLayout({
         <div className="relative mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
           <Link href="/meetings" className="group flex items-center gap-2.5">
             <span className="brand-gradient flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--color-border)] text-[var(--color-heading)] shadow-sm">
-              <NottiMark size={19} />
+              <MeetMateMark size={19} />
             </span>
             <span className="flex items-baseline gap-2">
               <span className="font-display text-[15px] font-semibold tracking-tight text-[var(--color-heading)]">
-                Notti
+                MeetMate
               </span>
               {user.org && (
                 <span className="hidden text-xs font-medium text-[var(--color-text-muted)] sm:inline">

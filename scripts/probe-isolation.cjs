@@ -1,6 +1,6 @@
 /**
  * Two-org tenant-isolation probe. Seeds two organizations, each with a user and
- * a meeting, mints a real Notti session cookie for each, and hits the running
+ * a meeting, mints a real MeetMate session cookie for each, and hits the running
  * app over HTTP — exercising canViewMeeting / listMeetingPage / requireMeeting
  * the way a real request does, not just the database.
  *
@@ -32,7 +32,7 @@ async function seedOrg(tag) {
 
 async function get(path, user) {
   const res = await fetch(new URL(path, BASE), {
-    headers: user ? { Cookie: `notti_session=${cookie(user)}` } : {},
+    headers: user ? { Cookie: `meetmate_session=${cookie(user)}` } : {},
     redirect: "manual",
   });
   const body = await res.text().catch(() => "");

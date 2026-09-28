@@ -1,6 +1,6 @@
-// Notti brand glyph — a rounded note card with a voice soundwave, drawn in
+// MeetMate brand glyph — a rounded note card with a voice soundwave, drawn in
 // currentColor so it inherits the surrounding text color. Voice in, notes out.
-export function NottiMark({ size = 20 }: { size?: number }) {
+export function MeetMateMark({ size = 20 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 64 64" fill="none" aria-hidden="true">
       <rect x="12" y="10" width="40" height="44" rx="10" stroke="currentColor" strokeWidth="3.4" />

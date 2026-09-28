@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
-import { NottiMark } from "@/components/NottiMark";
+import { MeetMateMark } from "@/components/MeetMateMark";
 
 export const dynamic = "force-dynamic";
 
@@ -28,12 +28,12 @@ const PLATFORMS = ["Google Meet", "Zoom", "Microsoft Teams", "Webex"];
 
 const STEPS = [
   { n: "1", t: "Add the meeting", b: "Paste a meeting link, or hit record for the room you're in. Nothing to install." },
-  { n: "2", t: "Notti joins & listens", b: "It shows up as its own participant, captures the audio and transcribes live." },
+  { n: "2", t: "MeetMate joins & listens", b: "It shows up as its own participant, captures the audio and transcribes live." },
   { n: "3", t: "Get your notes", b: "Summary, decisions and action items land in every attendee's inbox, minutes later." },
 ];
 
 const VALUES = [
-  { icon: I.bolt, t: "Zero setup", b: "No extension, no plugin. Paste a link and Notti is in the call." },
+  { icon: I.bolt, t: "Zero setup", b: "No extension, no plugin. Paste a link and MeetMate is in the call." },
   { icon: I.search, t: "Instantly searchable", b: "Find any moment across every meeting by typing what you remember." },
   { icon: I.users, t: "Made for teams", b: "One shared workspace — notes never depend on who was typing." },
   { icon: I.shield, t: "Private by default", b: "Each organization is fully walled off. Your calls stay yours." },
@@ -49,7 +49,7 @@ const PLANS = [
 ];
 
 const FAQ = [
-  { q: "Does everyone know it's being recorded?", a: "Yes — Notti joins as a visible, named participant with its own tile, never a hidden listener. You choose the name it shows up as." },
+  { q: "Does everyone know it's being recorded?", a: "Yes — MeetMate joins as a visible, named participant with its own tile, never a hidden listener. You choose the name it shows up as." },
   { q: "Which meeting tools does it work with?", a: "Google Meet, Zoom, Microsoft Teams and Webex out of the box. No link? Record on-device and you get the same transcription and notes." },
   { q: "How accurate are the notes?", a: "Transcripts are speaker-attributed and highly accurate, and the notes are generated from the full transcript — so decisions and action items reflect what was actually said." },
   { q: "Is my data private?", a: "Every organization is completely isolated. One customer can never see another's meetings, and your recordings and notes belong to you." },
@@ -66,9 +66,9 @@ export default async function Landing() {
         <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-3.5">
           <Link href="/" className="flex items-center gap-2.5">
             <span className="flex h-8 w-8 items-center justify-center rounded-lg text-white" style={{ background: "var(--l-grad)" }}>
-              <NottiMark size={18} />
+              <MeetMateMark size={18} />
             </span>
-            <span className="text-lg font-bold tracking-tight text-[var(--l-heading)]">Notti</span>
+            <span className="text-lg font-bold tracking-tight text-[var(--l-heading)]">MeetMate</span>
           </Link>
           <nav className="hidden items-center gap-8 text-sm font-medium text-[var(--l-text)] md:flex">
             <a href="#features" className="hover:text-[var(--l-heading)]">Features</a>
@@ -102,7 +102,7 @@ export default async function Landing() {
               Never take<br />meeting notes<br /><span className="l-grad-text">again.</span>
             </h1>
             <p className="mt-6 max-w-lg text-lg leading-relaxed text-[var(--l-text)]">
-              Notti joins your calls, transcribes every word, and writes the notes —
+              MeetMate joins your calls, transcribes every word, and writes the notes —
               summary, decisions and action items — before you&rsquo;ve left the room.
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-3">
@@ -143,7 +143,7 @@ export default async function Landing() {
               Every word, captured and attributed.
             </h2>
             <p className="mt-5 text-lg leading-relaxed text-[var(--l-text)]">
-              Notti transcribes the whole conversation as it happens — each line tagged to the right
+              MeetMate transcribes the whole conversation as it happens — each line tagged to the right
               speaker, timestamped, and searchable the instant the call ends. Skim an hour in seconds.
             </p>
             <ul className="mt-7 space-y-3">
@@ -228,7 +228,7 @@ export default async function Landing() {
         <div className="mx-auto max-w-2xl text-center">
           <p className="l-eyebrow">Pricing</p>
           <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-[var(--l-heading)] sm:text-[2.5rem]">Simple pricing that scales with your team.</h2>
-          <p className="mt-4 text-lg text-[var(--l-text)]">Start free. Upgrade once Notti has already saved you a meeting&rsquo;s worth of writing.</p>
+          <p className="mt-4 text-lg text-[var(--l-text)]">Start free. Upgrade once MeetMate has already saved you a meeting&rsquo;s worth of writing.</p>
         </div>
         <div className="mt-14 grid items-start gap-6 lg:grid-cols-3">
           {PLANS.map((p) => (
@@ -285,9 +285,9 @@ export default async function Landing() {
           <div className="absolute -right-16 -top-20 h-64 w-64 rounded-full bg-white/10 blur-2xl" />
           <div className="absolute -left-16 -bottom-20 h-64 w-64 rounded-full bg-white/10 blur-2xl" />
           <div className="relative">
-            <div className="mx-auto mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/15 text-white backdrop-blur"><NottiMark size={28} /></div>
+            <div className="mx-auto mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/15 text-white backdrop-blur"><MeetMateMark size={28} /></div>
             <h2 className="text-3xl font-extrabold tracking-tight text-white sm:text-[2.75rem]">Give your team back the meeting.</h2>
-            <p className="mx-auto mt-4 max-w-xl text-lg text-indigo-100">Set up your workspace in two minutes and let Notti handle the notes — starting with your next call.</p>
+            <p className="mx-auto mt-4 max-w-xl text-lg text-indigo-100">Set up your workspace in two minutes and let MeetMate handle the notes — starting with your next call.</p>
             <div className="mt-8 flex items-center justify-center gap-3">
               <Link href={cta.href} className="rounded-xl bg-white px-7 py-3 text-[15px] font-semibold text-[var(--l-accent)] shadow-sm transition-transform hover:-translate-y-0.5">{cta.label}</Link>
               <Link href="/login" className="rounded-xl border border-white/40 px-7 py-3 text-[15px] font-semibold text-white transition-colors hover:bg-white/10">Log in</Link>
@@ -300,8 +300,8 @@ export default async function Landing() {
       <footer className="border-t border-[var(--l-border)]">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-5 px-5 py-10 sm:flex-row">
           <div className="flex items-center gap-2.5">
-            <span className="flex h-7 w-7 items-center justify-center rounded-md text-white" style={{ background: "var(--l-grad)" }}><NottiMark size={15} /></span>
-            <span className="font-bold text-[var(--l-heading)]">Notti</span>
+            <span className="flex h-7 w-7 items-center justify-center rounded-md text-white" style={{ background: "var(--l-grad)" }}><MeetMateMark size={15} /></span>
+            <span className="font-bold text-[var(--l-heading)]">MeetMate</span>
             <span className="text-sm text-[var(--l-muted)]">— AI notes for every meeting</span>
           </div>
           <div className="flex items-center gap-6 text-sm font-medium text-[var(--l-text)]">
@@ -309,7 +309,7 @@ export default async function Landing() {
             <a href="#pricing" className="hover:text-[var(--l-accent)]">Pricing</a>
             <Link href="/login" className="hover:text-[var(--l-accent)]">Log in</Link>
           </div>
-          <span className="text-xs text-[var(--l-muted)]">© {new Date().getFullYear()} Notti</span>
+          <span className="text-xs text-[var(--l-muted)]">© {new Date().getFullYear()} MeetMate</span>
         </div>
       </footer>
     </div>
@@ -329,7 +329,7 @@ function HeroMock() {
         </div>
         <div className="rounded-xl bg-[var(--l-bg-soft)] p-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl text-white" style={{ background: "var(--l-grad)" }}><NottiMark size={20} /></div>
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl text-white" style={{ background: "var(--l-grad)" }}><MeetMateMark size={20} /></div>
             <div className="flex-1">
               <div className="text-sm font-bold text-[var(--l-heading)]">Q3 Planning · Product</div>
               <div className="text-[11px] text-[var(--l-muted)]">4 participants · 12:04</div>

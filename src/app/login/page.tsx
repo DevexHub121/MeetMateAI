@@ -20,7 +20,7 @@ export default async function LoginPage({
   return (
     <AuthShell
       title="Welcome back"
-      subtitle="Sign in to your Notti workspace."
+      subtitle="Sign in to your MeetMate workspace."
       footer={
         <>
           New here?{" "}

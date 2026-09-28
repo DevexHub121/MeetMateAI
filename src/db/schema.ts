@@ -322,7 +322,7 @@ export type Minutes = {
   nextSteps: string[]; // follow-ups and next-meeting items
 };
 
-// Notti's identity and multi-tenant model lives alongside the meeting tables.
+// MeetMate's identity and multi-tenant model lives alongside the meeting tables.
 export * from "./schema-auth";
 
 export type Meeting = typeof meetings.$inferSelect;

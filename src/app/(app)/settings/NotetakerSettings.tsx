@@ -77,7 +77,7 @@ export function NotetakerSettings({
               setName(e.target.value);
               setJustSaved(false);
             }}
-            placeholder="Notti"
+            placeholder="MeetMate"
             className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-heading)] outline-none placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-border-strong)]"
           />
           <button
@@ -115,7 +115,7 @@ export function NotetakerSettings({
           In the call
         </p>
         <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
-          Notti joins with a camera, so it shows up as a labelled tile instead of
+          MeetMate joins with a camera, so it shows up as a labelled tile instead of
           a blank square.
         </p>
 
@@ -124,14 +124,14 @@ export function NotetakerSettings({
             <div className="relative aspect-video bg-black">
               <Image
                 src="/notetaker/recording.jpg"
-                alt="The note-taker's camera tile: the Notti mark on a black background"
+                alt="The note-taker's camera tile: the MeetMate mark on a black background"
                 fill
                 sizes="26rem"
                 className="object-cover"
               />
               {/* Roughly where Meet and Zoom draw the participant label. */}
               <span className="absolute bottom-2 left-2 max-w-[85%] truncate rounded bg-black/55 px-2 py-1 text-xs font-medium text-white">
-                {name.trim() || "Notti"}
+                {name.trim() || "MeetMate"}
               </span>
             </div>
           </div>

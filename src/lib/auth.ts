@@ -8,17 +8,17 @@ import { users, orgMembers, organizations } from "@/db/schema";
 import { and, eq } from "drizzle-orm";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Notti's own auth. No SSO, no external identity provider — Notti issues and
+// MeetMate's own auth. No SSO, no external identity provider — MeetMate issues and
 // verifies its own session cookie, signed with AUTH_SECRET.
 //
 // The SessionUser shape is kept identical to what the meeting pipeline already
 // expects, so everything downstream of "who is this" forked over unchanged.
 // `role` collapses the platform role to the two values the app was written
-// against: a Notti "owner" is a "superadmin", everyone else is an "admin".
+// against: a MeetMate "owner" is a "superadmin", everyone else is an "admin".
 // Their role *within their organization* (admin vs member) rides on `org.roleKey`.
 // ─────────────────────────────────────────────────────────────────────────────
 
-const COOKIE_NAME = "notti_session";
+const COOKIE_NAME = "meetmate_session";
 const SESSION_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
 
 export type Role = "superadmin" | "admin";
@@ -82,7 +82,7 @@ export function verifyPassword(p: string, h: string): Promise<boolean> {
 }
 
 // Cookie domain: host-only by default (one app, one host). COOKIE_DOMAIN lets a
-// deployment share the session across, say, notti.ai and app.notti.ai — but it
+// deployment share the session across, say, meetmate.ai and app.meetmate.ai — but it
 // is dropped on localhost, where a domain-scoped cookie simply wouldn't set.
 async function cookieDomain(): Promise<string | undefined> {
   const d = process.env.COOKIE_DOMAIN;
@@ -215,7 +215,7 @@ export async function requireUser(): Promise<SessionUser> {
   return loginRedirect();
 }
 
-/** Require the platform owner (Notti staff). */
+/** Require the platform owner (MeetMate staff). */
 export async function requireSuperadmin(): Promise<SessionUser> {
   const user = await getCurrentUser();
   if (!user) return loginRedirect();

@@ -16,7 +16,7 @@ import { eq, sql } from "drizzle-orm";
  * built-in default.
  */
 
-export const DEFAULT_BOT_NAME = "Notti";
+export const DEFAULT_BOT_NAME = "MeetMate";
 
 /** Meeting platforms truncate long names in the participant tile, and Recall
  *  rejects the extremes outright. Short enough to survive both. */

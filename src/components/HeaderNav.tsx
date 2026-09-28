@@ -7,7 +7,7 @@ import type { SessionUser } from "@/lib/auth";
 
 // Responsive header nav: a full inline row on desktop, a hamburger + slide-down
 // panel on phones. Takes the (server-loaded) user so the layout stays a server
-// component. `logoutUrl` is "/logout", which clears Notti's own session cookie.
+// component. `logoutUrl` is "/logout", which clears MeetMate's own session cookie.
 export function HeaderNav({
   user,
   initials,

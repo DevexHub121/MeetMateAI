@@ -32,7 +32,7 @@ const H = 1440;
 const CHROME =
   "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 
-/** The Notti mark (src/components/NottiMark.tsx): a note card with a voice
+/** The MeetMate mark (src/components/MeetMateMark.tsx): a note card with a voice
  *  soundwave, without the tile background. */
 const MARK = `
 <svg viewBox="0 0 64 64" width="420" height="420" fill="none"
@@ -146,7 +146,7 @@ function page({ status, dotColor }) {
   <div class="grain"></div>
   <div class="stack">
     <div class="mark">${MARK}</div>
-    <div class="word">Notti</div>
+    <div class="word">MeetMate</div>
     <div class="status"><span class="dot"></span>${status}</div>
   </div>
 </body></html>`;

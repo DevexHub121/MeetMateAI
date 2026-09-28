@@ -20,7 +20,7 @@ async function requireAdmin() {
 }
 
 function inviteEmail(orgName: string, link: string): string {
-  return `<p>You've been invited to join <strong>${orgName}</strong> on Notti.</p>
+  return `<p>You've been invited to join <strong>${orgName}</strong> on MeetMate.</p>
     <p><a href="${link}" style="display:inline-block;background:#4f46e5;color:#fff;text-decoration:none;padding:10px 18px;border-radius:8px;font-weight:600">Accept your invitation</a></p>
     <p>Or paste this link into your browser:<br>${link}</p>`;
 }
@@ -50,7 +50,7 @@ export async function inviteTeamMember(
     throw new Error(err instanceof Error ? err.message : "Couldn't send that invite");
   }
 
-  const emailed = await sendEmail(email, `You're invited to ${org.name} on Notti`, inviteEmail(org.name, result.link));
+  const emailed = await sendEmail(email, `You're invited to ${org.name} on MeetMate`, inviteEmail(org.name, result.link));
   revalidatePath("/team");
   return { emailed, link: result.link };
 }

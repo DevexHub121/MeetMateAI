@@ -10,12 +10,12 @@ import {
 } from "drizzle-orm/pg-core";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Notti's own identity and multi-tenant model. Unlike the Orbit-era Echo, which
-// borrowed its login from a shared SSO portal, Notti is a standalone SaaS: it
+// MeetMate's own identity and multi-tenant model. Unlike the Orbit-era Echo, which
+// borrowed its login from a shared SSO portal, MeetMate is a standalone SaaS: it
 // owns its accounts, its organizations, and the wall between one customer's data
 // and another's.
 //
-// The model, kept deliberately small because Notti is a single product (the
+// The model, kept deliberately small because MeetMate is a single product (the
 // note-taker), not a suite:
 //   • a person is a `user` (email + password)
 //   • a company is an `organization`
@@ -23,7 +23,7 @@ import {
 //   • everything a customer creates — every meeting — belongs to an org
 // ─────────────────────────────────────────────────────────────────────────────
 
-// "owner" is Notti staff — the people who run the platform and can see across
+// "owner" is MeetMate staff — the people who run the platform and can see across
 // organizations for support. Everyone who signs up is a "user".
 export const platformRoleEnum = pgEnum("platform_role", ["owner", "user"]);
 
