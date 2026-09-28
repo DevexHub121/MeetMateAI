@@ -136,7 +136,7 @@ export function scoreEnrollment(signals: EnrollmentSignals): QualityReport {
       severity: nearestOther.score >= 0.55 ? "serious" : "warn",
       title: `Close to ${nearestOther.name}'s voice`,
       advice:
-        `Echo may confuse the two of you. If ${nearestOther.name} was in the room while you recorded, or this is a second profile for the same person, record again alone.`,
+        `MeetMate may confuse the two of you. If ${nearestOther.name} was in the room while you recorded, or this is a second profile for the same person, record again alone.`,
     });
   }
 

@@ -59,7 +59,7 @@ test("with no invite list every detected name is context", () => {
   assert.deepEqual(mentionedOnly(["Rahul", "Neha"], []), ["Rahul", "Neha"]);
 });
 
-// --- Echo's own labels are not people ---------------------------------------
+// --- MeetMate's own labels are not people ---------------------------------------
 
 test("speaker labels are not mentioned people", () => {
   // applySpeakerMap writes "Speaker 3:" at the head of every unidentified turn,

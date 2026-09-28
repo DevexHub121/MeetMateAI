@@ -31,7 +31,7 @@ function envBotName(): string {
  *
  * Control characters and newlines matter here in a way they don't in most
  * fields: this string is rendered by Zoom/Meet/Teams in a participant list we
- * don't control, and it's the one piece of Echo an outside guest sees. Collapse
+ * don't control, and it's the one piece of MeetMate an outside guest sees. Collapse
  * whitespace, drop anything unprintable, clamp the length. Returns null when
  * nothing usable is left, so a caller can tell "invalid" from "empty".
  */

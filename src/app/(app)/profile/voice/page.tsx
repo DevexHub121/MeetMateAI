@@ -31,7 +31,7 @@ export default async function VoiceProfilePage() {
           Voice profile
         </h1>
         <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
-          Record a short sample once, and Echo can recognise your voice in
+          Record a short sample once, and MeetMate can recognise your voice in
           meetings — so minutes and action items carry your name instead of
           &ldquo;Speaker 1&rdquo;.
         </p>
@@ -55,7 +55,7 @@ export default async function VoiceProfilePage() {
         </p>
         <p>
           Only people invited to a meeting are compared against it, and when
-          Echo isn&apos;t confident it leaves the speaker unnamed rather than
+          MeetMate isn&apos;t confident it leaves the speaker unnamed rather than
           guessing.
         </p>
       </div>

@@ -97,7 +97,7 @@ export function VoiceTrainingPrompt({ hasProfile }: { hasProfile: boolean }) {
               Train your voice
             </h2>
             <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
-              Record a thirty-second sample once, and Echo recognises you in
+              Record a thirty-second sample once, and MeetMate recognises you in
               meetings — so minutes and action items carry your name instead of
               &ldquo;Speaker&nbsp;1&rdquo;.
             </p>

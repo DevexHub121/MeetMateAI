@@ -36,7 +36,7 @@ export type VoicePerson = {
 };
 
 export type VoiceIdentification = {
-  /** Label → person, for the speaker map the rest of Echo already understands. */
+  /** Label → person, for the speaker map the rest of MeetMate already understands. */
   speakerMap: SpeakerMap;
   /** Per-group detail, for the UI and for logging why something did or didn't match. */
   groups: {

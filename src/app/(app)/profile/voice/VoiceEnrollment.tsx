@@ -417,7 +417,7 @@ export function VoiceEnrollment({
             className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--color-accent,#b600a8)]"
           />
           <span className="text-sm text-[var(--color-text-secondary)]">
-            I agree to Echo storing a{" "}
+            I agree to MeetMate storing a{" "}
             <strong className="text-[var(--color-heading)]">voiceprint</strong> —
             a numeric summary of my voice — so it can label me automatically in
             meeting transcripts. The recording and the voiceprint are private to

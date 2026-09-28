@@ -12,7 +12,7 @@ import {
 } from "@/lib/meetingLink";
 
 /**
- * Start a meeting — which means sending Echo's note-taker into the call.
+ * Start a meeting — which means sending MeetMate's note-taker into the call.
  *
  * "Start" used to mean something else entirely: a recorder running in this tab,
  * which on a client call had to ask for your screen, because a microphone can't

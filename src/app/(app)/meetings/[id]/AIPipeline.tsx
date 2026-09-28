@@ -1,6 +1,6 @@
 import type { MeetingStatus } from "@/db/schema";
 
-// The agentic view of what Echo is doing while it turns a recording into
+// The agentic view of what MeetMate is doing while it turns a recording into
 // minutes. Instead of a single opaque spinner, we surface the pipeline as
 // named stages the user can watch advance — the active one shimmers, finished
 // ones get a check. The server status drives which stage is live; <AutoRefresh>

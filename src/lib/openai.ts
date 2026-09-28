@@ -20,7 +20,7 @@ import {
   resolveAttendees,
 } from "@/lib/attendees";
 
-// OpenAI list prices (USD per 1M tokens) for the models Echo uses. Update these
+// OpenAI list prices (USD per 1M tokens) for the models MeetMate uses. Update these
 // if pricing changes or a new model is introduced — cost is computed at write
 // time so historical ai_usage rows keep the price they were billed at.
 const MODEL_PRICING: Record<string, { input: number; output: number }> = {
@@ -629,7 +629,7 @@ function withResolvedAttendees(
     }),
     // Everything the transcript named that isn't an attendee, including any
     // name the model had mistakenly promoted into the attendee list — minus the
-    // placeholders Echo itself wrote into the transcript, which are not people.
+    // placeholders MeetMate itself wrote into the transcript, which are not people.
     mentionedNames: mentionedOnly(heard, participantNames, {
       roleLabels,
       transcriptText,

@@ -66,7 +66,7 @@ export default async function Landing() {
         <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-3.5">
           <Link href="/" className="flex items-center gap-2.5">
             <span className="flex h-8 w-8 items-center justify-center rounded-lg text-white" style={{ background: "var(--l-grad)" }}>
-              <MeetMateMark size={18} />
+              <MeetMateMark size={18} mono />
             </span>
             <span className="text-lg font-bold tracking-tight text-[var(--l-heading)]">MeetMate</span>
           </Link>
@@ -99,8 +99,23 @@ export default async function Landing() {
               <span className="h-1.5 w-1.5 rounded-full bg-[var(--l-accent)]" /> Meets · Zoom · Teams · on-device
             </span>
             <h1 className="mt-6 text-[2.75rem] font-extrabold leading-[1.03] tracking-tight text-[var(--l-heading)] sm:text-[3.75rem]">
-              Never take<br />meeting notes<br /><span className="l-grad-text">again.</span>
+              Stop taking notes.<br /><span className="l-grad-text">Let me handle it.</span>
             </h1>
+            <p className="mt-5 text-xl font-semibold text-[var(--l-heading)]">
+              Your AI meeting memory.
+            </p>
+            {/*
+              Three words, three beats. Spaced dots rather than a sentence
+              because it is a strapline, not a claim — it should scan in one
+              glance and set the order the product actually works in.
+            */}
+            <p className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-sm font-medium uppercase tracking-[0.14em] text-[var(--l-muted)]">
+              <span>Record</span>
+              <span className="text-[var(--l-accent)]">·</span>
+              <span>Understand</span>
+              <span className="text-[var(--l-accent)]">·</span>
+              <span>Remember</span>
+            </p>
             <p className="mt-6 max-w-lg text-lg leading-relaxed text-[var(--l-text)]">
               MeetMate joins your calls, transcribes every word, and writes the notes —
               summary, decisions and action items — before you&rsquo;ve left the room.
@@ -285,7 +300,7 @@ export default async function Landing() {
           <div className="absolute -right-16 -top-20 h-64 w-64 rounded-full bg-white/10 blur-2xl" />
           <div className="absolute -left-16 -bottom-20 h-64 w-64 rounded-full bg-white/10 blur-2xl" />
           <div className="relative">
-            <div className="mx-auto mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/15 text-white backdrop-blur"><MeetMateMark size={28} /></div>
+            <div className="mx-auto mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/15 text-white backdrop-blur"><MeetMateMark size={28} mono /></div>
             <h2 className="text-3xl font-extrabold tracking-tight text-white sm:text-[2.75rem]">Give your team back the meeting.</h2>
             <p className="mx-auto mt-4 max-w-xl text-lg text-indigo-100">Set up your workspace in two minutes and let MeetMate handle the notes — starting with your next call.</p>
             <div className="mt-8 flex items-center justify-center gap-3">
@@ -300,7 +315,7 @@ export default async function Landing() {
       <footer className="border-t border-[var(--l-border)]">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-5 px-5 py-10 sm:flex-row">
           <div className="flex items-center gap-2.5">
-            <span className="flex h-7 w-7 items-center justify-center rounded-md text-white" style={{ background: "var(--l-grad)" }}><MeetMateMark size={15} /></span>
+            <span className="flex h-7 w-7 items-center justify-center rounded-md text-white" style={{ background: "var(--l-grad)" }}><MeetMateMark size={15} mono /></span>
             <span className="font-bold text-[var(--l-heading)]">MeetMate</span>
             <span className="text-sm text-[var(--l-muted)]">— AI notes for every meeting</span>
           </div>
@@ -309,7 +324,15 @@ export default async function Landing() {
             <a href="#pricing" className="hover:text-[var(--l-accent)]">Pricing</a>
             <Link href="/login" className="hover:text-[var(--l-accent)]">Log in</Link>
           </div>
-          <span className="text-xs text-[var(--l-muted)]">© {new Date().getFullYear()} MeetMate</span>
+          <span className="text-xs text-[var(--l-muted)]">
+            © {new Date().getFullYear()} MeetMate · meetmate.devexhub.com · Built by{" "}
+            <a
+              href="https://devexhub.com"
+              className="font-medium text-[var(--l-text)] transition-colors hover:text-[var(--l-accent)]"
+            >
+              Devex Hub
+            </a>
+          </span>
         </div>
       </footer>
     </div>
@@ -329,7 +352,7 @@ function HeroMock() {
         </div>
         <div className="rounded-xl bg-[var(--l-bg-soft)] p-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl text-white" style={{ background: "var(--l-grad)" }}><MeetMateMark size={20} /></div>
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl text-white" style={{ background: "var(--l-grad)" }}><MeetMateMark size={20} mono /></div>
             <div className="flex-1">
               <div className="text-sm font-bold text-[var(--l-heading)]">Q3 Planning · Product</div>
               <div className="text-[11px] text-[var(--l-muted)]">4 participants · 12:04</div>

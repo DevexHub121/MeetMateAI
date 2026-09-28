@@ -26,7 +26,7 @@ import { deleteStoredFile } from "@/lib/storage";
  * A profile is the centroid of that person's samples; the samples are kept so it
  * can be recomputed as more audio arrives. Everything here is keyed by the Orbit
  * user id for ownership and by lowercased email for matching, because those are
- * the two identities the rest of Echo already uses.
+ * the two identities the rest of MeetMate already uses.
  */
 
 /** The columns the enrolment UI needs — never the 256-float embedding. */
@@ -94,7 +94,7 @@ export async function hasVoiceProfile(userId: string): Promise<boolean> {
     return rows.length > 0;
   } catch (err) {
     // Deliberately never throws. This is called from the app layout, so a
-    // failure here doesn't break a prompt — it takes down every page in Echo
+    // failure here doesn't break a prompt — it takes down every page in MeetMate
     // with a bare "an error occurred in the Server Components render". A
     // transient database blip is not a good reason to make the whole app
     // unreachable, and the worst outcome of answering "false" is that someone

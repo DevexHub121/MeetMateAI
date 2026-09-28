@@ -138,7 +138,7 @@ export async function sendMinutesEmail(
 }
 
 // Invitation email sent when a meeting is scheduled for later, with an .ics
-// calendar attachment and a link to the meeting in Echo.
+// calendar attachment and a link to the meeting in MeetMate.
 export async function sendInviteEmail(
   meeting: { id: string; title: string; meetingDate: Date | null },
   invitees: Invitee[],
@@ -228,7 +228,7 @@ function renderInviteHtml(
       </p>
       <p style="color:#6b7280;font-size:13px;margin:8px 0 0">A calendar invite (.ics) is attached. You'll receive the minutes here automatically once the meeting is recorded and analyzed.</p>
     </div>
-    <div style="color:#9ca3af;font-size:12px;padding:12px 4px;border-top:1px solid #f3f4f6">Sent by Echo.</div>
+    <div style="color:#9ca3af;font-size:12px;padding:12px 4px;border-top:1px solid #f3f4f6">Sent by MeetMate.</div>
   </div>`;
 }
 
@@ -313,7 +313,7 @@ function renderMinutesHtml(
       ${section("Next steps", list(m.nextSteps))}
     </div>
     <div style="color:#9ca3af;font-size:12px;padding:12px 4px;border-top:1px solid #f3f4f6">
-      Generated automatically by Echo.
+      Generated automatically by MeetMate.
     </div>
   </div>`;
 }

@@ -10,7 +10,7 @@ import {
 } from "drizzle-orm/pg-core";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// MeetMate's own identity and multi-tenant model. Unlike the Orbit-era Echo, which
+// MeetMate's own identity and multi-tenant model. Unlike the Orbit-era MeetMate, which
 // borrowed its login from a shared SSO portal, MeetMate is a standalone SaaS: it
 // owns its accounts, its organizations, and the wall between one customer's data
 // and another's.

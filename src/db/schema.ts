@@ -74,7 +74,7 @@ export const meetings = pgTable("meetings", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
-// Per-call OpenAI usage log. Every chat completion Echo runs (speaker ID,
+// Per-call OpenAI usage log. Every chat completion MeetMate runs (speaker ID,
 // minutes generation) writes one row here via the runChat() choke point in
 // lib/openai.ts, capturing token counts and an estimated USD cost computed at
 // write time. Powers the "AI credit usage" view in the Orbit portal analytics.
@@ -100,7 +100,7 @@ export const aiUsage = pgTable("ai_usage", {
 
 export type AiUsage = typeof aiUsage.$inferSelect;
 
-// One row per AI note-taker dispatch. When Echo sends a bot into a live meeting
+// One row per AI note-taker dispatch. When MeetMate sends a bot into a live meeting
 // (Google Meet in v1) via a capture provider (Recall.ai), this tracks the bot's
 // lifecycle independently of the meeting's own processing status, and links the
 // provider's bot id back to our meeting so inbound webhooks can find it.
@@ -161,7 +161,7 @@ export type Employee = typeof employees.$inferSelect;
 // redeploy — currently just the name the note-taker joins calls under.
 //
 // A key/value table rather than a column per setting, and a single row rather
-// than a row per tenant: Echo is one deployment for one company, and the
+// than a row per tenant: MeetMate is one deployment for one company, and the
 // alternative is a migration every time a checkbox appears. The cost is that
 // values are text and callers parse them, which is why nothing here is read
 // raw — see src/lib/settings.ts.

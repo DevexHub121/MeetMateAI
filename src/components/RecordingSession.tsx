@@ -13,7 +13,7 @@ import {
 import type { MeetingType } from "@/db/schema";
 
 /**
- * Keeps a recording alive while you walk around the rest of Echo.
+ * Keeps a recording alive while you walk around the rest of MeetMate.
  *
  * The recorder used to live on the meeting page, which meant it died the moment
  * you left it: React unmounts the component, the unmount teardown stops every
@@ -172,7 +172,7 @@ export function RecordingSlotView({
           Another meeting is recording
         </p>
         <p className="mt-1 text-[var(--color-text-muted)]">
-          Echo records one meeting at a time, through this device&apos;s
+          MeetMate records one meeting at a time, through this device&apos;s
           microphone. Stop that one — the pill in the corner will take you to
           it — before starting this.
         </p>

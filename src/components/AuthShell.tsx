@@ -21,7 +21,7 @@ export function AuthShell({
       <div className="relative w-full max-w-sm">
         <Link href="/" className="mb-8 flex items-center justify-center gap-2.5">
           <span className="flex h-9 w-9 items-center justify-center rounded-lg text-white" style={{ background: "var(--l-grad)" }}>
-            <MeetMateMark size={20} />
+            <MeetMateMark size={20} mono />
           </span>
           <span className="text-lg font-bold tracking-tight text-[var(--l-heading)]">MeetMate</span>
         </Link>

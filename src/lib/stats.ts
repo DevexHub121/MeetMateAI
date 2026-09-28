@@ -2,10 +2,10 @@ import { db } from "@/db";
 import { meetings, aiUsage, type AiUsage, type Meeting } from "@/db/schema";
 
 /**
- * Org-wide Echo analytics. Computes a meeting-centric snapshot of how Echo is
+ * Org-wide MeetMate analytics. Computes a meeting-centric snapshot of how MeetMate is
  * being used and the manual note-taking it's automating, plus an AI credit-
  * usage view — for the Orbit portal's Analytics dashboard (see /api/stats).
- * Every number is derived from columns Echo already stores (meetings +
+ * Every number is derived from columns MeetMate already stores (meetings +
  * ai_usage); there's no separate event tracking. The portal fetches this over a
  * short-lived service token (see lib/portal.ts verifyServiceToken). The section
  * shapes mirror Candor's so the portal can render both with shared components.
@@ -25,7 +25,7 @@ export type EchoStats = {
     minutesGenerated: { value: number; deltaPct: number | null };
     completionRate: number; // % of period meetings that reached "completed"
   };
-  /** Section 2 — "how Echo is helping" impact numbers. */
+  /** Section 2 — "how MeetMate is helping" impact numbers. */
   impact: {
     meetingsRecorded: number;
     meetingsTranscribed: number;

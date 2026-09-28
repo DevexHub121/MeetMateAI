@@ -63,7 +63,7 @@ export type RecallBot = {
 // Dispatch a bot to a meeting URL. Recall joins at meeting time (or immediately
 // for an already-running meeting), records audio+video, and diarizes speakers.
 // We request the mixed audio recording plus metadata; transcription itself is
-// still done by Echo's own Deepgram step so quality/cost stay consistent.
+// still done by MeetMate's own Deepgram step so quality/cost stay consistent.
 export async function createMeetingBot(opts: {
   meetingUrl: string;
   meetingId: string;
@@ -82,7 +82,7 @@ export async function createMeetingBot(opts: {
     body: JSON.stringify({
       meeting_url: opts.meetingUrl,
       bot_name: botName,
-      // The bot's camera feed: an Echo-branded still, so it reads as a labelled
+      // The bot's camera feed: an MeetMate-branded still, so it reads as a labelled
       // note-taker in the participant grid instead of an anonymous black tile.
       // Omitted entirely when the images can't be loaded — sending a malformed
       // value here is rejected by Recall and would take the whole bot with it.
@@ -171,7 +171,7 @@ export function extractDownloadUrl(bot: RecallBot): string | null {
  * where audio is not an acceptable substitute.
  *
  * The URL is a presigned S3 link with an expiry, so it can't be stored in the
- * database — it has to be minted per viewing. That's the whole reason Echo
+ * database — it has to be minted per viewing. That's the whole reason MeetMate
  * streams the video from Recall instead of keeping a copy: see the video route.
  * For the short-term reuse that makes seeking bearable, use videoUrlForBot.
  */

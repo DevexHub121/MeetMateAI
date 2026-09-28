@@ -30,7 +30,7 @@ function norm(name: string): string {
 const firstOf = (name: string) => norm(name).split(" ")[0] ?? "";
 
 /**
- * Labels Echo writes into the transcript itself, which are not people.
+ * Labels MeetMate writes into the transcript itself, which are not people.
  *
  * `applySpeakerMap` rewrites every turn to start with whatever the speaker map
  * says, so an unidentified speaker stays "Speaker 3" and a client-meeting role
@@ -51,7 +51,7 @@ const LABEL_PATTERNS = [
   /^participants?\s*\d*$/i,
 ];
 
-/** True when a "name" is one of Echo's own placeholders rather than a person. */
+/** True when a "name" is one of MeetMate's own placeholders rather than a person. */
 export function isRoleLabel(name: string, extra: readonly string[] = []): boolean {
   const k = norm(name);
   if (!k) return true;

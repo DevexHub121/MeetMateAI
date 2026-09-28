@@ -66,7 +66,7 @@ export async function sendActionItemsToMake(
     const item = items[i];
     const person = resolveOwner(item.owner, invitees, employees);
     const payload = {
-      source: "Echo",
+      source: "MeetMate",
       meetingId: meeting.id,
       meetingTitle: meeting.title,
       meetingDate: meeting.meetingDate?.toISOString() ?? null,

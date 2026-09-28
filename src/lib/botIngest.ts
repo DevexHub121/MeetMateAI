@@ -22,7 +22,7 @@ export type IngestResult =
  * URL and the event subscriptions are configuration in Recall's dashboard, the
  * signing secret has to match, and none of that is in this repo or visible from
  * it. When any of it is off, the bot joins, records perfectly, uploads its media
- * — and Echo sits on an empty meeting forever, with no error to show for it,
+ * — and MeetMate sits on an empty meeting forever, with no error to show for it,
  * because nothing ever told us the recording existed.
  *
  * So the meeting page's status poll can call this too (see syncBotStatus). The

@@ -14,7 +14,7 @@ import { useRecordingSession } from "@/components/RecordingSession";
  *
  * It stayed on the page as a card of equal weight to the note-taker, with a
  * button reading "Start meeting" — so for a Meet call people pressed it, got a
- * share prompt over the call, and reasonably concluded Echo wanted their
+ * share prompt over the call, and reasonably concluded MeetMate wanted their
  * screen. Same capability, one step further down: you have to say you want it.
  */
 export function DeviceRecording({

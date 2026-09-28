@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 /**
  * The note-taker's video, for meetings a bot recorded.
  *
- * Echo deliberately stores only the audio: an hour of mixed video is ~140 MB
+ * MeetMate deliberately stores only the audio: an hour of mixed video is ~140 MB
  * against ~15 MB for the MP3, the pipeline never looks at the picture, and
  * reading a file that size into a Buffer is what got a worker OOM-killed and
  * left a meeting stuck for twelve hours. Keeping a second copy of every meeting
@@ -27,7 +27,7 @@ export const dynamic = "force-dynamic";
  *     elsewhere. The URL is a v2 presigned link (AWSAccessKeyId/Signature/
  *     Expires), and adding `response-content-type` invalidates the signature —
  *     verified, it 403s. Overriding the header on the way past is the only fix.
- *   - A redirect hands the browser a URL that reaches the bytes without an Echo
+ *   - A redirect hands the browser a URL that reaches the bytes without an MeetMate
  *     session until it expires. Streaming keeps the presigned URL server-side,
  *     so access stays tied to the session on every request.
  *
@@ -41,7 +41,7 @@ export const dynamic = "force-dynamic";
  *
  * The tradeoff to know about: this depends on Recall's retention staying
  * generous. Videos are not ours, and if that setting ever changes they go away
- * without Echo noticing. The audio, transcript and minutes are all ours and are
+ * without MeetMate noticing. The audio, transcript and minutes are all ours and are
  * unaffected.
  */
 export async function GET(

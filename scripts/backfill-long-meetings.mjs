@@ -18,7 +18,7 @@
  *               complete, so re-analysing costs no transcription spend at all.
  *
  * Deliberately does not send email. Every one of these meetings already has
- * emailedAt set, and the pipeline checks it, so corrected minutes appear in Echo
+ * emailedAt set, and the pipeline checks it, so corrected minutes appear in MeetMate
  * without a second copy landing in anyone's inbox. Sending the corrected version
  * is a decision for a person, not a side effect of a backfill.
  *
@@ -93,7 +93,7 @@ async function main() {
             speaker_map = null, minutes = null,
             transcription_request_id = null, transcription_started_at = null
         where id = ${m.id}`;
-      console.log("  queued — open the meeting in Echo to start processing");
+      console.log("  queued — open the meeting in MeetMate to start processing");
     }
   }
 
@@ -103,12 +103,12 @@ async function main() {
     for (const m of truncated) {
       console.log(`\n[re-analyse] ${m.id} ${m.title}`);
       await sql`update meetings set minutes = null, status = 'transcribed', error = null where id = ${m.id}`;
-      console.log("  queued — open the meeting in Echo to regenerate its minutes");
+      console.log("  queued — open the meeting in MeetMate to regenerate its minutes");
     }
   }
 
   console.log(
-    "\nDone. These are queued, not run: opening each meeting in Echo starts it,\n" +
+    "\nDone. These are queued, not run: opening each meeting in MeetMate starts it,\n" +
       "which keeps the work attributable and lets you check one before doing the rest.\n",
   );
 }

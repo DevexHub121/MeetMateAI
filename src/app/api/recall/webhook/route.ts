@@ -68,7 +68,7 @@ function statusCodeOf(evt: RecallEvent): string | undefined {
  * values. Recall sends the white-labelled set, and reading only the `svix-`
  * spelling meant all three lookups returned null and *every* delivery Recall has
  * ever made was rejected as an invalid signature: the note-taker recorded, the
- * media uploaded, and Echo never heard about any of it.
+ * media uploaded, and MeetMate never heard about any of it.
  *
  * Both spellings are accepted rather than swapping one for the other, because
  * which one arrives is the sender's branding setting — not something this route

@@ -54,7 +54,7 @@ const FONT_CSS_URL =
  *
  * The obvious version of this links to Google Fonts and gives Chrome a few
  * seconds to catch up. That silently produced a wrong tile: the two renders
- * disagreed by 29px on the width of the word "Echo", because one of them
+ * disagreed by 29px on the width of the word "MeetMate", because one of them
  * screenshotted before the font landed and fell back to a system face. A
  * timeout is a hope. Downloading first and embedding the bytes means the render
  * has no network dependency left to lose a race against.

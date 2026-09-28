@@ -15,7 +15,7 @@ function clock(seconds: number): string {
 
 /**
  * The browser's native <audio controls> renders as a bright white pill that
- * fights Echo's dark surfaces, and its shadow DOM can't be restyled portably.
+ * fights MeetMate's dark surfaces, and its shadow DOM can't be restyled portably.
  * This is the same element with our own chrome on top — plus the two things
  * that actually matter for a meeting recording: skip-back and playback speed.
  */
