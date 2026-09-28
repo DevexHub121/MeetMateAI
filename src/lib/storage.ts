@@ -6,7 +6,9 @@ import {
   S3Client,
   PutObjectCommand,
   GetObjectCommand,
+  HeadObjectCommand,
   DeleteObjectCommand,
+  DeleteObjectsCommand,
   CreateMultipartUploadCommand,
   UploadPartCommand,
   CompleteMultipartUploadCommand,
@@ -74,7 +76,10 @@ async function ensureDir(dir: string) {
 }
 
 export async function saveFile(
-  subdir: "recordings",
+  // "voiceprints" holds the short enrolment clips, kept so a voiceprint can be
+  // regenerated if the embedding model changes without asking everyone to
+  // re-record. Separate prefix from recordings so retention can differ.
+  subdir: "recordings" | "voiceprints",
   originalName: string,
   data: Buffer,
 ): Promise<{ storedName: string; relativePath: string }> {
@@ -122,6 +127,54 @@ export async function createPresignedPut(key: string): Promise<string | null> {
     new PutObjectCommand({ Bucket: SPACES_BUCKET!, Key: key }),
     { expiresIn: 3600 },
   );
+}
+
+/**
+ * Mint a short-lived presigned GET URL for a stored object.
+ *
+ * The counterpart to createPresignedPut, and it exists for the same reason in
+ * reverse: so a third party can read one object directly from Spaces without
+ * the bytes passing through this server. Deepgram takes a URL and fetches the
+ * audio itself, which is what lets a three-hour recording be transcribed by a
+ * worker that could never have held it in memory.
+ *
+ * Treat the result as a credential — anyone holding it can read the object
+ * until it expires. Short expiry, and never logged.
+ */
+export async function createPresignedGet(
+  key: string,
+  expiresIn = 900,
+): Promise<string | null> {
+  if (!useSpaces) return null;
+  return getSignedUrl(
+    s3(),
+    new GetObjectCommand({ Bucket: SPACES_BUCKET!, Key: key }),
+    { expiresIn },
+  );
+}
+
+/**
+ * Size of a stored object in bytes, without reading it.
+ *
+ * Used to decide whether a recording is big enough to be worth transcribing
+ * asynchronously. Deliberately size and not duration: `duration_seconds` is only
+ * written by the browser recorder, so every note-taker meeting has it null —
+ * including the ones this decision exists to route correctly.
+ */
+export async function storedFileSize(relativePath: string): Promise<number | null> {
+  const safe = relativePath.normalize().replace(/^(\.\.(\/|\\|$))+/, "");
+  try {
+    if (useSpaces) {
+      const head = await s3().send(
+        new HeadObjectCommand({ Bucket: SPACES_BUCKET!, Key: safe }),
+      );
+      return head.ContentLength ?? null;
+    }
+    const { stat } = await import("fs/promises");
+    return (await stat(path.join(STORAGE_ROOT, safe))).size;
+  } catch {
+    return null;
+  }
 }
 
 async function streamToBuffer(body: unknown): Promise<Buffer> {
@@ -172,19 +225,25 @@ async function* readParts(keys: string[]): AsyncGenerator<Buffer> {
   }
 }
 
-/**
- * Concatenates already-stored parts into a single object, without ever holding
- * the whole recording in memory.
- *
- * Returns the same shape as saveFile so callers can treat them alike.
- */
-export async function mergeStoredParts(
-  partKeys: string[],
-  subdir: "recordings",
-  originalName: string,
-): Promise<{ storedName: string; relativePath: string }> {
-  if (partKeys.length === 0) throw new Error("No parts to merge");
+/** Normalise whatever a source yields into a Buffer, without copying a Buffer. */
+function asBuffer(chunk: Buffer | Uint8Array): Buffer {
+  return Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+}
 
+/**
+ * Writes an arbitrary stream of chunks into one stored object, with peak memory
+ * bounded by the 5 MB window rather than by the size of what is being written.
+ *
+ * Extracted from mergeStoredParts so that pulling a recording from a remote URL
+ * gets the same treatment. The two differ only in where the bytes come from —
+ * sibling parts in our own bucket, or a download from Recall — and the part that
+ * matters, never accumulating the whole file, is identical for both.
+ */
+async function streamToStorage(
+  subdir: "recordings" | "voiceprints",
+  originalName: string,
+  source: AsyncIterable<Buffer | Uint8Array>,
+): Promise<{ storedName: string; relativePath: string }> {
   const ext = path.extname(originalName);
   const storedName = `${randomUUID()}${ext}`;
   const relativePath = `${subdir}/${storedName}`;
@@ -198,7 +257,7 @@ export async function mergeStoredParts(
     const target = path.join(dir, storedName);
     const handle = await open(target, "w");
     try {
-      for await (const buf of readParts(partKeys)) await handle.write(buf);
+      for await (const chunk of source) await handle.write(asBuffer(chunk));
     } finally {
       await handle.close();
     }
@@ -242,7 +301,9 @@ export async function mergeStoredParts(
   };
 
   try {
-    for await (const buf of readParts(partKeys)) {
+    for await (const chunk of source) {
+      const buf = asBuffer(chunk);
+      if (buf.byteLength === 0) continue;
       window.push(buf);
       windowBytes += buf.byteLength;
       if (windowBytes >= MIN_MULTIPART_BYTES) await flushWindow();
@@ -250,7 +311,7 @@ export async function mergeStoredParts(
     // Whatever is left becomes the final part, which may be under 5 MB.
     await flushWindow();
 
-    if (done.length === 0) throw new Error("All parts were empty");
+    if (done.length === 0) throw new Error("Nothing was written");
 
     await client.send(
       new CompleteMultipartUploadCommand({
@@ -278,6 +339,116 @@ export async function mergeStoredParts(
   }
 
   return { storedName, relativePath };
+}
+
+/**
+ * Concatenates already-stored parts into a single object, without ever holding
+ * the whole recording in memory.
+ *
+ * Returns the same shape as saveFile so callers can treat them alike.
+ */
+export async function mergeStoredParts(
+  partKeys: string[],
+  subdir: "recordings",
+  originalName: string,
+): Promise<{ storedName: string; relativePath: string }> {
+  if (partKeys.length === 0) throw new Error("No parts to merge");
+  return streamToStorage(subdir, originalName, readParts(partKeys));
+}
+
+/** Iterate a fetch body, which is a web ReadableStream rather than a Node one. */
+async function* readWebStream(
+  body: ReadableStream<Uint8Array>,
+): AsyncGenerator<Uint8Array> {
+  const reader = body.getReader();
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) return;
+      if (value) yield value;
+    }
+  } finally {
+    reader.releaseLock();
+  }
+}
+
+/**
+ * Copy a remote file into our own storage without ever holding it in memory.
+ *
+ * This replaces `Buffer.from(await res.arrayBuffer())`, which materialised the
+ * whole download and then copied it again — two full copies of the recording in
+ * the worker heap at once. That is how a 140 MB note-taker video got a worker
+ * OOM-killed, and an OOM kill is not an exception: nothing unwinds, no status is
+ * written, and the meeting sits on "transcribing" forever looking like it is
+ * still working.
+ *
+ * The recording still lands in exactly the same place it always did — same
+ * bucket, same key shape, same `recordingPath` on the row, same player. Only the
+ * route the bytes take between the two ends has changed.
+ */
+export async function saveFileFromUrl(
+  subdir: "recordings" | "voiceprints",
+  originalName: string,
+  url: string,
+  opts: { timeoutMs?: number } = {},
+): Promise<{ storedName: string; relativePath: string }> {
+  // Generous, because this is a multi-hundred-MB download over someone else's
+  // network — but not unbounded, because a hung fetch with no timeout is how a
+  // job waits forever without failing.
+  const res = await fetch(url, {
+    signal: AbortSignal.timeout(opts.timeoutMs ?? 15 * 60 * 1000),
+  });
+  if (!res.ok) throw new Error(`download failed (HTTP ${res.status})`);
+  if (!res.body) throw new Error("download returned no body");
+
+  const saved = await streamToStorage(
+    subdir,
+    originalName,
+    readWebStream(res.body as ReadableStream<Uint8Array>),
+  );
+  return saved;
+}
+
+/**
+ * Remove many stored objects in as few round trips as possible.
+ *
+ * The caller that matters is finalizing a recording: a three-hour meeting
+ * uploads ~540 parts, and deleting them one `await` at a time took 35-55
+ * seconds of a single server action — after the merge had already succeeded, so
+ * every second of it was spent risking a timeout on work that was already done.
+ * S3 takes up to 1000 keys per DeleteObjects call, which turns 540 round trips
+ * into one.
+ *
+ * Best-effort, like deleteStoredFile: an orphaned part costs a fraction of a
+ * cent, and is always preferable to failing a save that has otherwise worked.
+ */
+export async function deleteStoredFiles(relativePaths: string[]): Promise<void> {
+  if (relativePaths.length === 0) return;
+  const safe = relativePaths.map((p) =>
+    p.normalize().replace(/^(\.\.(\/|\\|$))+/, ""),
+  );
+
+  if (!useSpaces) {
+    await Promise.all(safe.map((p) => deleteStoredFile(p).catch(() => {})));
+    return;
+  }
+
+  const BATCH = 1000;
+  for (let i = 0; i < safe.length; i += BATCH) {
+    try {
+      await s3().send(
+        new DeleteObjectsCommand({
+          Bucket: SPACES_BUCKET!,
+          Delete: {
+            Objects: safe.slice(i, i + BATCH).map((Key) => ({ Key })),
+            Quiet: true,
+          },
+        }),
+      );
+    } catch {
+      // Best effort — see above.
+    }
+  }
 }
 
 // Best-effort removal of a stored recording (Spaces object or local file).

@@ -3,6 +3,8 @@ import { db } from "@/db";
 import { meetings } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import {
+  getBot,
+  resolveRecordingUrl,
   normalizeBotStatus,
   verifyRecallWebhook,
   recallWebhookConfigured,
@@ -137,22 +139,47 @@ export async function POST(req: NextRequest) {
   const isDone = evt.event === "bot.done" || label === "done";
   if (!isDone) return NextResponse.json({ ok: true, status: label });
 
-  // The download, the dedupe and the hand-off to the pipeline all live in
-  // ingestBotRecording, because the meeting page reaches them too — a webhook
-  // that never arrives must not be the difference between having the recording
-  // and not. Both callers racing is fine; the claim inside sorts it out.
-  const result = await ingestBotRecording({
-    sessionId: session.id,
-    meetingId: meeting.id,
-    botId,
-    hasRecording: Boolean(meeting.recordingPath),
-  });
+  if (meeting.recordingPath) {
+    return NextResponse.json({ ok: true, result: "already-have-it" });
+  }
 
-  // Recall retries on a non-2xx, which is what we want when the media wasn't
-  // there yet or the download broke.
-  const retryable = result === "no-media" || result === "failed";
-  return NextResponse.json(
-    { ok: !retryable, result },
-    { status: retryable ? 500 : 200 },
-  );
+  // Ask whether the media exists before promising anything. This is one cheap
+  // API call, and it is the only part of the ingest whose answer Recall can act
+  // on: "not ready yet" has to be a non-2xx so it retries.
+  let hasMedia = false;
+  try {
+    const bot = await getBot(botId);
+    hasMedia = Boolean(await resolveRecordingUrl(bot));
+
+    if (hasMedia) {
+      // Deliberately detached. The download is hundreds of megabytes and takes
+      // minutes; awaiting it here held the webhook connection open well past
+      // Svix's ~30s delivery timeout, so every long recording was logged as a
+      // failed delivery and retried — the retry then hit the in-flight claim and
+      // returned 200, leaving Recall's dashboard full of failures for ingests
+      // that actually worked.
+      //
+      // Safe to drop the result because ingestBotRecording is reachable from the
+      // meeting page too (syncBotStatus), and its atomic claim makes both
+      // callers racing a no-op rather than a double download.
+      void ingestBotRecording({
+        sessionId: session.id,
+        meetingId: meeting.id,
+        botId,
+        bot,
+        hasRecording: false,
+      });
+    }
+  } catch (err) {
+    console.error("[recall] webhook could not start ingest:", err);
+    return NextResponse.json({ ok: false, result: "failed" }, { status: 500 });
+  }
+
+  if (!hasMedia) {
+    // Bot finished but the recording hasn't surfaced yet. Non-2xx so Recall
+    // brings it back to us.
+    return NextResponse.json({ ok: false, result: "no-media" }, { status: 500 });
+  }
+
+  return NextResponse.json({ ok: true, result: "ingesting" });
 }

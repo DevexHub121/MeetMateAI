@@ -29,6 +29,8 @@ export function HeaderNav({
       <nav className="hidden items-center gap-1 text-sm md:flex">
         <NavLink href="/meetings">Meetings</NavLink>
         <NavLink href="/team">Team</NavLink>
+        {/* Everyone's own voice profile — per-user, so no role gate. */}
+        <NavLink href="/profile/voice">Voice</NavLink>
         {canManageSettings && <NavLink href="/settings">Settings</NavLink>}
         <Link href="/meetings/new" className="btn-primary ml-1 px-3.5 py-1.5">
           <span className="text-base leading-none">+</span> New meeting
@@ -71,6 +73,9 @@ export function HeaderNav({
             </NavLink>
             <NavLink href="/team" onClick={close} className="py-2">
               Team
+            </NavLink>
+            <NavLink href="/profile/voice" onClick={close} className="py-2">
+              Voice
             </NavLink>
             {canManageSettings && (
               <NavLink href="/settings" onClick={close} className="py-2">

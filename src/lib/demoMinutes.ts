@@ -1,5 +1,5 @@
 import type { Minutes, TranscriptResult } from "@/db/schema";
-import { distinctSpeakers } from "@/lib/speakers";
+import { distinctSpeakers, namesFromConversation } from "@/lib/speakers";
 
 // Marker that flags placeholder minutes in the UI/email. Kept as a constant so
 // the renderer can detect and badge demo output.
@@ -59,6 +59,9 @@ export function demoMinutes(
   return {
     summary,
     attendees,
+    // No model here, so names come from the same self-intro/vocative scan the
+    // speaker dropdown uses. The caller filters out anyone already invited.
+    mentionedNames: namesFromConversation(transcript),
     agenda: [],
     keyPoints,
     decisions: [],

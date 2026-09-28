@@ -13,8 +13,10 @@ import { saveParticipants } from "@/lib/participants";
 import { applySpeakerMap } from "@/lib/speakers";
 import {
   deleteStoredFile,
+  deleteStoredFiles,
   mergeStoredParts,
   saveFile,
+  saveFileFromUrl,
   createPresignedPut,
 } from "@/lib/storage";
 import { grantLiveToken } from "@/lib/deepgram";
@@ -34,7 +36,7 @@ import {
 import { sendInviteEmail } from "@/lib/email";
 import { sendActionItemsToMake } from "@/lib/tasks";
 import { listEmployees } from "@/lib/employees";
-import { and, desc, eq, gt, inArray } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -183,6 +185,78 @@ export async function deleteMeeting(meetingId: string) {
   await db.delete(meetings).where(eq(meetings.id, meetingId));
   revalidatePath("/meetings");
   redirect("/meetings");
+}
+
+/**
+ * Add people to a meeting that is already under way.
+ *
+ * Someone wandering into the room ten minutes in is the normal case, not the
+ * exception, and until now the only way to record it was to have known in
+ * advance. Being on this list is what decides three separate things later —
+ * who the minutes name as an attendee, who the minutes are emailed to, and
+ * whose voiceprints the speaker matching is allowed to consider — so a late
+ * arrival who never got added is absent from the record of a meeting they were
+ * in, and their voice is matched against a candidate list they aren't on.
+ *
+ * The append is done in one statement rather than read-modify-write. Two people
+ * adding someone at the same moment on the Neon HTTP driver — which has no
+ * transactions — would otherwise each write the list they read, and whichever
+ * landed second would silently erase the other's addition. Here the database
+ * does the reading, the de-duplication and the append together.
+ *
+ * De-duplication uses the same identity as the meetings filter: the lowercased
+ * email, falling back to the name for someone added by hand without one. Adding
+ * a person twice is a no-op, not a second chip.
+ */
+export async function addMeetingParticipants(
+  meetingId: string,
+  people: { name: string; email: string }[],
+): Promise<{ added: number; invitees: Invitee[] }> {
+  await requireMeetingAccess(meetingId);
+
+  const clean: Invitee[] = [];
+  for (const p of people.slice(0, 50)) {
+    const name = String(p?.name ?? "").trim();
+    const email = String(p?.email ?? "").trim();
+    if (!name && !email) continue;
+    clean.push({ name: name || email, email });
+  }
+  if (clean.length === 0) return { added: 0, invitees: [] };
+
+  const before = await getMeeting(meetingId);
+  const had = (before?.invitees ?? []).length;
+
+  const rows = await db
+    .update(meetings)
+    .set({
+      invitees: sql`
+        coalesce(${meetings.invitees}, '[]'::jsonb) || (
+          select coalesce(jsonb_agg(incoming), '[]'::jsonb)
+          from jsonb_array_elements(${JSON.stringify(clean)}::jsonb) as incoming
+          where not exists (
+            select 1
+            from jsonb_array_elements(coalesce(${meetings.invitees}, '[]'::jsonb)) as existing
+            where lower(trim(coalesce(nullif(existing->>'email', ''), existing->>'name', '')))
+                = lower(trim(coalesce(nullif(incoming->>'email', ''), incoming->>'name', '')))
+          )
+        )`,
+    })
+    .where(eq(meetings.id, meetingId))
+    .returning({ invitees: meetings.invitees });
+
+  const invitees = rows[0]?.invitees ?? [];
+
+  // Into the address book too, so the next meeting can pick them without
+  // retyping. Never allowed to fail the add that just succeeded.
+  try {
+    await saveParticipants(clean.filter((c) => c.email));
+  } catch (err) {
+    console.error("[participants] Could not save to the address book:", err);
+  }
+
+  revalidatePath(`/meetings/${meetingId}`);
+  revalidatePath("/meetings");
+  return { added: invitees.length - had, invitees };
 }
 
 // Remove someone from the saved-participants address book.
@@ -336,14 +410,15 @@ export async function finalizeRecordingParts(
     })
     .where(eq(meetings.id, meetingId));
 
-  // Best-effort cleanup of the now-merged parts.
-  for (let seq = 0; seq < partCount; seq++) {
-    try {
-      await deleteStoredFile(partKey(meetingId, seq, clean));
-    } catch {
-      // Orphaned part is harmless.
-    }
-  }
+  // Best-effort cleanup of the now-merged parts, in one call rather than one
+  // per part. A three-hour meeting is ~540 parts, and deleting them one await
+  // at a time spent 35-55 seconds inside this action *after* the merge had
+  // already succeeded — pure timeout risk on work that was finished.
+  await deleteStoredFiles(
+    Array.from({ length: partCount }, (_, seq) =>
+      partKey(meetingId, seq, clean),
+    ),
+  );
 
   revalidatePath(`/meetings/${meetingId}`);
   void processMeeting(meetingId);
@@ -367,7 +442,13 @@ export async function assignSpeakers(formData: FormData) {
     try {
       const person = JSON.parse(raw) as { name: string; email: string | null };
       if (person.name) {
-        map[labels[i]] = { name: person.name, email: person.email ?? null };
+        // Marked "manual" so nothing later overrules it — not the voiceprint
+        // matcher, not the model. A person chose this on purpose.
+        map[labels[i]] = {
+          name: person.name,
+          email: person.email ?? null,
+          source: "manual",
+        };
       }
     } catch {
       // ignore a malformed option value
@@ -406,6 +487,11 @@ export async function regenerateMinutes(meetingId: string) {
       {
         title: meeting.title,
         participants,
+        // The invite list itself, not just the joined string — it decides the
+        // attendee section rather than merely hinting at it.
+        participantNames: (meeting.invitees ?? []).map((i) => i.name),
+        // Not people: the labels this meeting stamps onto its own transcript.
+        roleLabels: [meeting.hostName, meeting.clientName],
         meetingDate: meeting.meetingDate,
         type: meeting.type,
       },
@@ -474,17 +560,24 @@ export async function ingestRecordingFromUrl(meetingId: string, url: string) {
     throw new Error("Enter a valid http(s) URL to an audio or video file");
   }
 
-  const res = await fetch(clean);
-  if (!res.ok) {
-    throw new Error(`Couldn't fetch the file (HTTP ${res.status})`);
+  // A HEAD first, purely to name the file: the extension decides what the
+  // pipeline thinks it is holding, and it is worth one cheap round trip to get
+  // right. Not fatal if the host refuses HEAD.
+  let contentType = "";
+  try {
+    const head = await fetch(clean, {
+      method: "HEAD",
+      signal: AbortSignal.timeout(15_000),
+    });
+    if (head.ok) {
+      contentType = (head.headers.get("content-type") ?? "")
+        .split(";")[0]
+        .trim()
+        .toLowerCase();
+    }
+  } catch {
+    // Fall through to the URL's own extension.
   }
-
-  const contentType = (res.headers.get("content-type") ?? "")
-    .split(";")[0]
-    .trim()
-    .toLowerCase();
-  const bytes = Buffer.from(await res.arrayBuffer());
-  if (bytes.length === 0) throw new Error("The file was empty");
 
   // Prefer the URL's extension; fall back to the content-type; else mp3.
   const urlExt = clean.split("?")[0].split(".").pop()?.toLowerCase() ?? "";
@@ -493,7 +586,13 @@ export async function ingestRecordingFromUrl(meetingId: string, url: string) {
     ? urlExt
     : (AUDIO_EXT_BY_TYPE[contentType] ?? "mp3");
 
-  const saved = await saveFile("recordings", `${meetingId}.${ext}`, bytes);
+  // Streamed, not buffered. This had no size cap and no timeout at all, which
+  // made a long imported recording the easiest way to OOM the server.
+  const saved = await saveFileFromUrl(
+    "recordings",
+    `${meetingId}.${ext}`,
+    clean,
+  );
 
   await db
     .update(meetings)

@@ -304,6 +304,7 @@ function renderMinutesHtml(
     <div style="padding:12px 4px">
       ${section("Summary", `<p style="color:#374151;font-size:14px;line-height:1.6;margin:6px 0 16px">${esc(m.summary)}</p>`)}
       ${section("Attendees", m.attendees.length ? `<p style="color:#374151;font-size:14px;margin:6px 0 16px">${m.attendees.map(esc).join(" · ")}</p>` : "")}
+      ${section("Mentioned in the meeting", m.mentionedNames?.length ? `<p style="color:#6b7280;font-size:14px;margin:6px 0 4px">${m.mentionedNames.map(esc).join(" · ")}</p><p style="color:#9ca3af;font-size:12px;margin:0 0 16px">Detected from the conversation — not attendees.</p>` : "")}
       ${section("Agenda", list(m.agenda))}
       ${section("Key points", list(m.keyPoints))}
       ${section("Decisions", list(m.decisions))}

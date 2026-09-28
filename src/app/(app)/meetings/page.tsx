@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { listMeetingPage } from "@/lib/meetings";
+import { listMeetingFilterOptions, listMeetingPage } from "@/lib/meetings";
 import { requireUser } from "@/lib/auth";
 import { StatusBadge } from "@/components/StatusBadge";
 import { formatIST } from "@/lib/datetime";
 import type { MeetingType } from "@/db/schema";
+import { MeetingFilters } from "./MeetingFilters";
 
 export const dynamic = "force-dynamic";
 
@@ -16,33 +17,68 @@ const FILTERS: { key: "all" | MeetingType; label: string }[] = [
 export default async function MeetingsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ type?: string; page?: string }>;
+  searchParams: Promise<{
+    type?: string;
+    page?: string;
+    q?: string;
+    from?: string;
+    to?: string;
+    participant?: string;
+    by?: string;
+  }>;
 }) {
-  const { type, page } = await searchParams;
+  const { type, page, q, from, to, participant, by } = await searchParams;
   const active: "all" | MeetingType =
     type === "internal" || type === "client" ? type : "all";
 
   const user = await requireUser();
-  // Only a superadmin sees who created each meeting.
+  // Only a superadmin sees who created each meeting — and so only a superadmin
+  // is offered the filter for it.
   const showHost = user.role === "superadmin";
+
+  // Everything the URL is narrowing by. Validated in the query builder, not
+  // here: these are strings from a query string and nothing else.
+  const filters = {
+    q: q ?? "",
+    from: from ?? "",
+    to: to ?? "",
+    participant: participant ?? "",
+    createdBy: showHost ? (by ?? "") : "",
+  };
 
   // Paginated and counted in SQL. Doing it here in JS meant fetching every
   // meeting — transcripts included — to display ten titles.
   const PAGE_SIZE = 10;
-  const { rows, counts, totalPages, currentPage } = await listMeetingPage(
-    user,
-    { type: active, page: Number(page) || 1, pageSize: PAGE_SIZE },
-  );
+  const [{ rows, counts, totalPages, currentPage }, options] = await Promise.all([
+    listMeetingPage(user, {
+      type: active,
+      page: Number(page) || 1,
+      pageSize: PAGE_SIZE,
+      ...filters,
+    }),
+    listMeetingFilterOptions(user),
+  ]);
   const shownCount = active === "all" ? counts.all : counts[active];
+  const filtered = Object.values(filters).some(Boolean);
 
-  // Build a URL that keeps the active type filter and sets the page.
-  const pageHref = (p: number) => {
+  // Build a URL that keeps every active filter and sets the page. Losing the
+  // filters on "next page" is the classic version of this bug.
+  const withParams = (over: Record<string, string>) => {
     const params = new URLSearchParams();
     if (active !== "all") params.set("type", active);
-    if (p > 1) params.set("page", String(p));
+    if (filters.q) params.set("q", filters.q);
+    if (filters.from) params.set("from", filters.from);
+    if (filters.to) params.set("to", filters.to);
+    if (filters.participant) params.set("participant", filters.participant);
+    if (filters.createdBy) params.set("by", filters.createdBy);
+    for (const [k, v] of Object.entries(over)) {
+      if (v) params.set(k, v);
+      else params.delete(k);
+    }
     const qs = params.toString();
     return qs ? `/meetings?${qs}` : "/meetings";
   };
+  const pageHref = (p: number) => withParams({ page: p > 1 ? String(p) : "" });
 
   return (
     <div>
@@ -53,8 +89,15 @@ export default async function MeetingsPage({
         <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
           {shownCount} meeting{shownCount === 1 ? "" : "s"}
           {active !== "all" ? ` · ${active}` : ""}
+          {filtered ? " · filtered" : ""}
         </p>
       </div>
+
+      <MeetingFilters
+        values={{ type: active, ...filters }}
+        options={options}
+        showCreator={showHost}
+      />
 
       {/* Filter toggle: differentiate internal vs client meetings. */}
       <div className="mb-5 inline-flex rounded-lg border border-[var(--color-border)] p-0.5">
@@ -64,7 +107,7 @@ export default async function MeetingsPage({
           return (
             <Link
               key={f.key}
-              href={f.key === "all" ? "/meetings" : `/meetings?type=${f.key}`}
+              href={withParams({ type: f.key === "all" ? "" : f.key, page: "" })}
               className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
                 isActive
                   ? "bg-[var(--color-elevated)] text-[var(--color-heading)]"
@@ -86,7 +129,25 @@ export default async function MeetingsPage({
         })}
       </div>
 
-      {rows.length === 0 ? (
+      {rows.length === 0 && filtered ? (
+        /* Nothing matched. Deliberately not the "no meetings yet" state — the
+           meetings exist, the filters just excluded them, and offering to record
+           a first one would be telling the reader something untrue. */
+        <div className="card flex flex-col items-center gap-3 border-dashed p-14 text-center">
+          <p className="font-medium text-[var(--color-heading)]">
+            No meetings match these filters
+          </p>
+          <p className="max-w-xs text-sm text-[var(--color-text-muted)]">
+            Try a different date range, or clear a filter to widen the search.
+          </p>
+          <Link
+            href={active === "all" ? "/meetings" : `/meetings?type=${active}`}
+            className="btn-secondary mt-1 px-4 py-2 text-sm"
+          >
+            Clear filters
+          </Link>
+        </div>
+      ) : rows.length === 0 ? (
         <div className="card animate-fade-in-up flex flex-col items-center gap-3 border-dashed p-14 text-center">
           <span className="relative mb-1">
             <span

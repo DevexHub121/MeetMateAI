@@ -8,6 +8,8 @@ import {
   boolean,
   integer,
   doublePrecision,
+  real,
+  vector,
 } from "drizzle-orm/pg-core";
 import { organizations, users } from "./schema-auth";
 
@@ -58,6 +60,15 @@ export const meetings = pgTable("meetings", {
   speakerMap: jsonb("speaker_map").$type<SpeakerMap | null>(), // "Speaker 0" → person
   minutes: jsonb("minutes").$type<Minutes | null>(),
   durationSeconds: text("duration_seconds"),
+  // Async transcription bookkeeping. A long recording is handed to Deepgram as
+  // a URL and the transcript arrives later at a callback, so the row has to
+  // remember that a job is outstanding — otherwise a callback that never comes
+  // is indistinguishable from one that is still on its way, and the meeting
+  // sits on "transcribing" forever with nothing to say why.
+  transcriptionRequestId: text("transcription_request_id"),
+  transcriptionStartedAt: timestamp("transcription_started_at", {
+    withTimezone: true,
+  }),
   emailedAt: timestamp("emailed_at", { withTimezone: true }), // when minutes were emailed to invitees
   tasksSentAt: timestamp("tasks_sent_at", { withTimezone: true }), // when action items were pushed to Make
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -163,6 +174,106 @@ export const appSettings = pgTable("app_settings", {
 
 export type AppSetting = typeof appSettings.$inferSelect;
 
+// ─── Voice recognition ──────────────────────────────────────────────────────
+//
+// A voiceprint is a 256-float embedding from the WeSpeaker model: a point in a
+// space where the same person's speech lands close together and different people
+// land far apart. Nothing is trained — enrolment is one forward pass, matching is
+// a nearest-vector search, and removing someone is deleting a row.
+//
+// Stored as pgvector so the search happens in SQL. Vectors live in their own
+// tables rather than on `meetings`/`employees` for the reason spelled out in
+// lib/meetings.ts: a wide column nobody renders still ships over the wire on
+// every list query.
+
+export const VOICE_EMBEDDING_DIM = 256;
+
+/**
+ * One voiceprint per Orbit user — the centroid of everything we've heard them
+ * say. `userId` is the portal's user id, matching the convention used by
+ * `meetings.createdByUserId`; there's no FK because there is no local users
+ * table. `email` is carried alongside because it, not the uuid, is what links a
+ * person to meeting invitees, employees and speaker maps.
+ */
+export const voiceProfiles = pgTable("voice_profiles", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").notNull().unique(),
+  email: text("email").notNull(), // lowercased
+  name: text("name").notNull(),
+  embedding: vector("embedding", { dimensions: VOICE_EMBEDDING_DIM }).notNull(),
+  // How many samples the centroid averages — grows as meetings are folded in.
+  sampleCount: integer("sample_count").notNull().default(0),
+  // Free text, not an enum, so swapping models doesn't need a migration.
+  model: text("model").notNull(),
+  // The kept enrolment clip, so voiceprints can be regenerated on a model change
+  // without asking anyone to re-record. Deleted with the profile.
+  clipPath: text("clip_path"),
+  // Explicit biometric consent. Null = not consented = must not be used.
+  consentAt: timestamp("consent_at", { withTimezone: true }),
+  enrolledAt: timestamp("enrolled_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export type VoiceProfile = typeof voiceProfiles.$inferSelect;
+
+/**
+ * The individual clips behind a centroid.
+ *
+ * Kept rather than collapsed because they are what lets a profile improve:
+ * enrolment happens close to the laptop, meetings happen across a room, and that
+ * mismatch is the single biggest source of error in far-field speaker matching.
+ * Folding confidently-matched meeting windows back in drags the centroid towards
+ * the conditions it will actually be used in.
+ */
+export const voiceSamples = pgTable("voice_samples", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  profileId: uuid("profile_id")
+    .notNull()
+    .references(() => voiceProfiles.id, { onDelete: "cascade" }),
+  embedding: vector("embedding", { dimensions: VOICE_EMBEDDING_DIM }).notNull(),
+  source: text("source").notNull(), // "enrollment" | "meeting"
+  meetingId: uuid("meeting_id").references(() => meetings.id, {
+    onDelete: "set null",
+  }),
+  confidence: doublePrecision("confidence"),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export type VoiceSample = typeof voiceSamples.$inferSelect;
+
+/**
+ * Per-window embeddings captured live while a meeting records.
+ *
+ * The server cannot decode the stored webm/opus — there is no ffmpeg on the
+ * buildpack — but the browser already holds decoded PCM in its capture graph, so
+ * the embedding is computed there and only the vector is uploaded. About 1 KB per
+ * window, which is nothing next to the audio itself.
+ *
+ * Transient: consumed by the pipeline once the transcript exists, then deleted.
+ * `start_s`/`end_s` because `end` is a reserved word in Postgres.
+ */
+export const meetingVoiceWindows = pgTable("meeting_voice_windows", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  meetingId: uuid("meeting_id")
+    .notNull()
+    .references(() => meetings.id, { onDelete: "cascade" }),
+  start: doublePrecision("start_s").notNull(), // seconds from recording start
+  end: doublePrecision("end_s").notNull(),
+  embedding: vector("embedding", { dimensions: VOICE_EMBEDDING_DIM }).notNull(),
+  speechProb: real("speech_prob"), // VAD confidence this window is speech
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export type MeetingVoiceWindow = typeof meetingVoiceWindows.$inferSelect;
+
 export type TranscriptUtterance = {
   speaker: string;
   text: string;
@@ -176,14 +287,33 @@ export type TranscriptResult = {
 
 // Maps a diarized speaker label ("Speaker 0") to a real person, so minutes use
 // real names and action items get the right owner.
-export type SpeakerAssignment = { name: string; email: string | null };
+//
+// `source` records who decided, because the three deciders are not equal and a
+// later run must not undo an earlier, better one. Precedence is
+// manual > voice > llm > role: a person who picked a name from the dropdown has
+// settled it, a voiceprint match beats a guess made from the words, and the
+// client/host role fallback is only ever a last resort. Optional so rows written
+// before this existed still parse — treat a missing source as "llm".
+export type SpeakerSource = "manual" | "voice" | "llm" | "role";
+export type SpeakerAssignment = {
+  name: string;
+  email: string | null;
+  source?: SpeakerSource;
+  confidence?: number; // 0-1 cosine similarity, for voice matches
+};
 export type SpeakerMap = Record<string, SpeakerAssignment>;
 
 export type ActionItem = { owner: string; task: string; due: string | null };
 export type Minutes = {
   title?: string; // short 3-6 word meeting title inferred from the discussion
   summary: string; // 3-5 sentence overview of the meeting
-  attendees: string[]; // names/speakers inferred from the transcript
+  // Who was invited. The invite list is a fact; who the model thinks it heard
+  // is an inference, and conflating them put non-participants in the minutes.
+  attendees: string[];
+  // Names the conversation mentioned that are NOT attendees — usually people
+  // being discussed rather than present. Context, deliberately kept out of the
+  // attendee list. Optional: minutes written before this existed lack it.
+  mentionedNames?: string[];
   agenda: string[]; // topics discussed, in order
   keyPoints: string[]; // notable discussion points
   decisions: string[]; // concrete decisions made

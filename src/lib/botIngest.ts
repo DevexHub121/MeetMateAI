@@ -4,7 +4,7 @@ import { meetings } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { getBot, resolveRecordingUrl, type RecallBot } from "@/lib/recall";
 import { claimSessionForIngest, updateSessionStatus } from "@/lib/recordingSessions";
-import { saveFile } from "@/lib/storage";
+import { saveFileFromUrl } from "@/lib/storage";
 import { CLEARED_BY_NEW_RECORDING, processMeeting } from "@/lib/pipeline";
 
 export type IngestResult =
@@ -57,11 +57,6 @@ export async function ingestBotRecording(opts: {
       return "no-media";
     }
 
-    const res = await fetch(media.url);
-    if (!res.ok) throw new Error(`download failed (HTTP ${res.status})`);
-    const bytes = Buffer.from(await res.arrayBuffer());
-    if (bytes.length === 0) throw new Error("downloaded recording was empty");
-
     // Keep the container from the URL, defaulting by what we actually asked for
     // rather than always assuming mp4 — an audio download saved as .mp4 plays in
     // nothing and tells the pipeline the wrong thing about its own file.
@@ -71,7 +66,15 @@ export async function ingestBotRecording(opts: {
       : media.kind === "audio"
         ? "mp3"
         : "mp4";
-    const saved = await saveFile("recordings", `${botId}.${ext}`, bytes);
+
+    // Streamed into the bucket rather than buffered. The recording lands in the
+    // same place as it always has; what changes is that a three-hour video no
+    // longer has to fit in the worker's heap — twice — on the way there.
+    const saved = await saveFileFromUrl(
+      "recordings",
+      `${botId}.${ext}`,
+      media.url,
+    );
 
     await db
       .update(meetings)

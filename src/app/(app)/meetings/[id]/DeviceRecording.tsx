@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import { useRecordingSession } from "@/components/RecordingSession";
 
 /**
  * Hides the browser recorder behind a deliberate choice.
@@ -16,10 +17,20 @@ import { useState, type ReactNode } from "react";
  * share prompt over the call, and reasonably concluded Echo wanted their
  * screen. Same capability, one step further down: you have to say you want it.
  */
-export function DeviceRecording({ children }: { children: ReactNode }) {
+export function DeviceRecording({
+  meetingId,
+  children,
+}: {
+  meetingId: string;
+  children: ReactNode;
+}) {
   const [open, setOpen] = useState(false);
+  const { activeMeetingId } = useRecordingSession();
 
-  if (open) return <>{children}</>;
+  // Already recording this meeting — you got here by coming back to it, so the
+  // recorder is the thing you came for. Making you re-open a disclosure to see
+  // your own running recording would be absurd.
+  if (open || activeMeetingId === meetingId) return <>{children}</>;
 
   return (
     <p className="px-1 text-xs text-[var(--color-text-muted)]">

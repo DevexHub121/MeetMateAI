@@ -11,6 +11,11 @@
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
+    // Node's built-in test runner strips types and resolves real files, so the
+    // test in scripts/ imports "../src/lib/voice/match.ts" by its actual name.
+    // Safe here because noEmit is on — this only permits the extension, nothing
+    // in src/ uses it (app code imports via the "@/" alias).
+    "allowImportingTsExtensions": true,
     "jsx": "react-jsx",
     "incremental": true,
     "plugins": [

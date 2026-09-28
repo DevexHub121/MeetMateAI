@@ -2,6 +2,9 @@ import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { HeaderNav } from "@/components/HeaderNav";
 import { NottiMark } from "@/components/NottiMark";
+import { VoiceTrainingPrompt } from "@/components/VoiceTrainingPrompt";
+import { hasVoiceProfile } from "@/lib/voiceProfiles";
+import { RecordingSessionProvider } from "@/components/RecordingSession";
 
 export default async function AppLayout({
   children,
@@ -9,6 +12,8 @@ export default async function AppLayout({
   children: React.ReactNode;
 }>) {
   const user = await requireUser();
+  // One indexed boolean — drives the first-run nudge to record a voice profile.
+  const enrolled = await hasVoiceProfile(user.id);
 
   const initials = user.name
     .split(" ")
@@ -40,9 +45,15 @@ export default async function AppLayout({
           <HeaderNav user={user} initials={initials} logoutUrl="/logout" />
         </div>
       </header>
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6 sm:py-8">
-        <div className="animate-fade-in-up">{children}</div>
-      </main>
+      {/* Inside the layout, so it survives every navigation the layout survives —
+          which is what lets a recording keep running while you read another
+          meeting's notes. */}
+      <RecordingSessionProvider>
+        <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6 sm:py-8">
+          <div className="animate-fade-in-up">{children}</div>
+        </main>
+      </RecordingSessionProvider>
+      <VoiceTrainingPrompt hasProfile={enrolled} />
     </div>
   );
 }

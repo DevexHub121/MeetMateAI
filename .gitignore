@@ -42,3 +42,6 @@ next-env.d.ts
 
 # local file storage (recordings)
 /storage
+
+# ONNX Runtime wasm, staged from node_modules by scripts/prepare-voice-assets.mjs
+/public/ort

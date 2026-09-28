@@ -3,10 +3,16 @@ import { db } from "@/db";
 import { meetings } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { getMeeting } from "@/lib/meetings";
-import { readStoredFile } from "@/lib/storage";
-import { transcribeAudio } from "@/lib/deepgram";
+import {
+  createPresignedGet,
+  readStoredFile,
+  storedFileSize,
+} from "@/lib/storage";
+import { submitTranscriptionByUrl, transcribeAudio } from "@/lib/deepgram";
+import { callbackUrlFor } from "@/lib/transcriptionCallback";
 import { generateMinutes, identifySpeakers } from "@/lib/openai";
 import { applySpeakerMap } from "@/lib/speakers";
+import { mergeSpeakerMaps, withSource } from "@/lib/voice/identify";
 import { sendMinutesEmail } from "@/lib/email";
 
 /**
@@ -59,6 +65,28 @@ export const CLEARED_BY_NEW_RECORDING = {
  * ingest already uses, which is a database change; this is not a substitute for
  * that so much as the cheap 95% of it.
  */
+/**
+ * Above this, transcribe asynchronously from a URL rather than uploading bytes.
+ *
+ * Measured, not estimated: a 29-minute note-taker recording is 26.7 MB, so
+ * Recall's mixed MP3 runs about 55 MB an hour — not the ~15 MB/hour quoted in
+ * recall.ts. That puts the crossover near half an hour of a bot-recorded call,
+ * so most client meetings take this path. That is the right way round: it is the
+ * path with no memory ceiling and no processing timeout.
+ *
+ * The browser recorder at 64 kbps makes ~29 MB an hour, so an in-room meeting
+ * crosses at roughly the same point. Below it, the synchronous path finishes in
+ * seconds and is not worth the extra moving part.
+ */
+const ASYNC_TRANSCRIBE_BYTES = 25 * 1024 * 1024;
+
+/**
+ * How long an outstanding transcription is assumed to still be alive. Matches
+ * the watchdog in lib/stalled.ts: before this, waiting is correct; after it, the
+ * meeting has already been marked failed and a retry is what should happen.
+ */
+const STALL_GRACE_MS = 45 * 60_000;
+
 const inFlight = new Set<string>();
 
 export async function processMeeting(meetingId: string) {
@@ -93,10 +121,59 @@ export async function processMeeting(meetingId: string) {
     );
 
     if (!alreadyTranscribed) {
+      const inFlightAsync =
+        meeting.transcriptionRequestId != null &&
+        meeting.transcriptionStartedAt != null &&
+        Date.now() - meeting.transcriptionStartedAt.getTime() < STALL_GRACE_MS;
+
+      // An asynchronous job already in flight is invisible from the row alone:
+      // it says "transcribing" whether Deepgram is still working on it or the
+      // callback died on the way back. Leave it alone — without this, the
+      // restart button submits a second job for the same audio and bills for it
+      // twice. Past the stall deadline the watchdog has already called it
+      // failed, so reaching here means the job is genuinely recent.
+      if (inFlightAsync) return;
+
       await db
         .update(meetings)
-        .set({ status: "transcribing", error: null })
+        .set({
+          status: "transcribing",
+          error: null,
+          transcriptionStartedAt: new Date(),
+          transcriptionRequestId: null,
+        })
         .where(eq(meetings.id, meetingId));
+
+      // Big recordings go to Deepgram as a URL, with the result delivered to a
+      // callback.
+      //
+      // Reading the file to send it is what put a whole meeting in the worker's
+      // heap — twice, counting the SDK's copy of the request body — and it is
+      // how a 140 MB note-taker video got the worker OOM-killed. An OOM kill is
+      // not an exception: nothing unwinds and the meeting sits on "transcribing"
+      // forever. Handing over a URL means the bytes never come here at all, and
+      // it also escapes the 10-minute ceiling on a synchronous request, which a
+      // three-hour meeting can genuinely exceed — failing as a 504 *after* all
+      // the work has been done.
+      //
+      // Small recordings stay on the synchronous path: it is the well-tested one
+      // and it needs no callback to come back, so the common case keeps working
+      // even if the callback route ever breaks.
+      const size = await storedFileSize(meeting.recordingPath);
+      const callbackUrl = callbackUrlFor(meetingId);
+
+      if (callbackUrl && size !== null && size > ASYNC_TRANSCRIBE_BYTES) {
+        const mediaUrl = await createPresignedGet(meeting.recordingPath);
+        if (mediaUrl) {
+          const requestId = await submitTranscriptionByUrl(mediaUrl, callbackUrl);
+          await db
+            .update(meetings)
+            .set({ transcriptionRequestId: requestId })
+            .where(eq(meetings.id, meetingId));
+          // The callback resumes this same function once the transcript lands.
+          return;
+        }
+      }
 
       const audio = await readStoredFile(meeting.recordingPath);
       transcript = await transcribeAudio(audio);
@@ -128,14 +205,30 @@ export async function processMeeting(meetingId: string) {
           }
         : undefined;
 
-    let speakerMap = meeting.speakerMap ?? null;
-    if (!speakerMap || Object.keys(speakerMap).length === 0) {
-      speakerMap = await identifySpeakers(
+    // Merge per label rather than all-or-nothing.
+    //
+    // This used to skip identification entirely whenever any map existed, so a
+    // single hand-corrected name froze every other speaker in the meeting as
+    // "Speaker 1". Now each label is decided on its own, and a label already
+    // settled by a person or by a voiceprint is simply left alone — the model is
+    // only asked about the ones nothing else has claimed.
+    const existing = meeting.speakerMap ?? {};
+    const labels = new Set(
+      (transcript.utterances ?? []).map((u) => u.speaker),
+    );
+    const unresolved = [...labels].filter((l) => !existing[l]);
+
+    let speakerMap = existing;
+    if (unresolved.length > 0) {
+      const guessed = await identifySpeakers(
         transcript,
         meeting.invitees ?? [],
         clientContext,
         meetingId,
       );
+      // `existing` first: on equal trust the settled answer wins, so a rerun
+      // never churns names that were already decided.
+      speakerMap = mergeSpeakerMaps(existing, withSource(guessed, "llm"));
       if (Object.keys(speakerMap).length > 0) {
         await db
           .update(meetings)
@@ -158,6 +251,11 @@ export async function processMeeting(meetingId: string) {
       {
         title: meeting.title,
         participants,
+        // The invite list itself, not just the joined string — it decides the
+        // attendee section rather than merely hinting at it.
+        participantNames: (meeting.invitees ?? []).map((i) => i.name),
+        // Not people: the labels this meeting stamps onto its own transcript.
+        roleLabels: [meeting.hostName, meeting.clientName],
         meetingDate: meeting.meetingDate,
         type: meeting.type,
       },

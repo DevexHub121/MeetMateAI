@@ -8,6 +8,8 @@ import {
   useState,
   useSyncExternalStore,
 } from "react";
+import { createPortal } from "react-dom";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { MeetingType } from "@/db/schema";
 import {
@@ -153,11 +155,26 @@ export function MeetingRecorder({
   meetingId,
   meetingType,
   canSendNoteTaker = false,
+  container,
+  onRetainedChange,
 }: {
   meetingId: string;
   meetingType: MeetingType;
   /** Whether the note-taker card is on the page for the hint to link to. */
   canSendNoteTaker?: boolean;
+  /**
+   * Where in the page to render. Null means the meeting page isn't on screen —
+   * this component now lives in the app layout (see RecordingSession), so that
+   * is a navigation, not an unmount, and the recording continues either way.
+   */
+  container?: HTMLElement | null;
+  /**
+   * Whether there is currently something here that would be lost by tearing
+   * this component down — audio being captured, an upload in flight, or a
+   * failed save still holding the only copy of the blob. The layout uses it to
+   * decide when the recorder may be released or re-pointed at another meeting.
+   */
+  onRetainedChange?: (retained: boolean) => void;
 }) {
   const router = useRouter();
   const [status, setStatus] = useState<Status>("idle");
@@ -1011,11 +1028,39 @@ export function MeetingRecorder({
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-  }, [status]);
+    // `container` matters: leaving the page unmounts the canvas and coming back
+    // mounts a new one, and the loop has to be pointed at whichever exists now.
+  }, [status, container]);
 
   const mmss = `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(
     seconds % 60,
   ).padStart(2, "0")}`;
+
+  /**
+   * Is there anything here that must not be thrown away?
+   *
+   * Not the same question as "is it recording". A save that failed still holds
+   * the only copy of the audio in this tab — that is precisely the state the
+   * retry button exists for — so releasing the component then would discard a
+   * recording that was successfully captured. Anything else is idle.
+   */
+  const retained =
+    status === "starting" ||
+    status === "recording" ||
+    status === "saving" ||
+    saveFailure !== null;
+
+  // Through a ref, so the effect keys off the answer changing and not off the
+  // caller passing a fresh closure. The layout's handler is rebuilt on every one
+  // of its renders; depending on it directly would run this after every render
+  // of a component that re-renders once a second while recording.
+  const retainedCb = useRef(onRetainedChange);
+  useEffect(() => {
+    retainedCb.current = onRetainedChange;
+  });
+  useEffect(() => {
+    retainedCb.current?.(retained);
+  }, [retained]);
 
   const active = status === "recording";
   const live = status === "recording" || status === "starting" || status === "saving";
@@ -1103,7 +1148,23 @@ export function MeetingRecorder({
               ? "Connecting…"
               : "Rough text as you speak — the saved transcript is more accurate.";
 
-  return (
+  // Off its own meeting page: no card to render into, so show the pill instead.
+  // Everything above this line has already run — the recorder, the flush timer
+  // and the caption socket neither know nor care which of the two is on screen.
+  if (!container) {
+    if (!retained || typeof document === "undefined") return null;
+    return createPortal(
+      <DetachedPill
+        meetingId={meetingId}
+        status={status}
+        seconds={seconds}
+        onStop={stop}
+      />,
+      document.body,
+    );
+  }
+
+  return createPortal(
     <section
       className={`card overflow-hidden transition-shadow duration-500 ${
         active ? "ai-border ai-glow" : ""
@@ -1318,7 +1379,63 @@ export function MeetingRecorder({
           )}
         </div>
       )}
-    </section>
+    </section>,
+    container,
+  );
+}
+
+/**
+ * The recording, reduced to something that can follow you around the app.
+ *
+ * Fixed to the corner over every page, so at no point can a recording be running
+ * without being visible — the failure mode of a background recorder is that you
+ * forget it exists. Carries the two things worth having away from the meeting:
+ * how long it has been going, and a way back.
+ */
+function DetachedPill({
+  meetingId,
+  status,
+  seconds,
+  onStop,
+}: {
+  meetingId: string;
+  status: Status;
+  seconds: number;
+  onStop: () => void;
+}) {
+  const recording = status === "recording";
+  return (
+    <div className="fixed bottom-4 right-4 z-50 flex items-center gap-3 rounded-full border border-[var(--color-border-strong)] bg-[rgba(24,24,24,0.92)] py-2 pl-4 pr-2 shadow-lg backdrop-blur-md">
+      <span className="flex items-center gap-2 text-sm font-medium text-[var(--color-heading)]">
+        {recording ? (
+          <span className="h-2 w-2 animate-pulse rounded-full bg-red-500" />
+        ) : (
+          <span className="h-2 w-2 rounded-full bg-[var(--color-text-muted)]" />
+        )}
+        {status === "saving"
+          ? "Saving…"
+          : status === "starting"
+            ? "Starting…"
+            : status === "error"
+              ? "Save failed"
+              : fmtDuration(seconds)}
+      </span>
+      <Link
+        href={`/meetings/${meetingId}`}
+        className="text-xs font-medium text-[var(--color-text-secondary)] underline underline-offset-2 transition-colors hover:text-[var(--color-heading)]"
+      >
+        Back to meeting
+      </Link>
+      {recording && (
+        <button
+          type="button"
+          onClick={onStop}
+          className="rounded-full bg-[var(--color-elevated)] px-3 py-1 text-xs font-medium text-[var(--color-heading)] ring-1 ring-inset ring-white/10 transition-colors hover:bg-white/10"
+        >
+          Stop
+        </button>
+      )}
+    </div>
   );
 }
 

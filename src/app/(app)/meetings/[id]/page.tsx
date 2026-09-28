@@ -17,7 +17,8 @@ import {
   syncBotStatus,
 } from "@/lib/botStatus";
 import { recallEnabled, warmVideoUrl } from "@/lib/recall";
-import { MeetingRecorder } from "./MeetingRecorder";
+import { failIfStalled } from "@/lib/stalled";
+import { RecordingSlotView } from "@/components/RecordingSession";
 import { AIPipeline } from "./AIPipeline";
 import { AudioImport } from "./AudioImport";
 import { StartMeeting } from "./StartMeeting";
@@ -25,11 +26,14 @@ import { StopNoteTaker } from "./StopNoteTaker";
 import { DeviceRecording } from "./DeviceRecording";
 import { MinutesView } from "./MinutesView";
 import { SpeakerMapping } from "./SpeakerMapping";
+import { VoiceIdentify } from "./VoiceIdentify";
+import { hasVoiceWindows } from "../voiceActions";
 import { TitleActions } from "./TitleActions";
 import { TranscriptView } from "./TranscriptView";
 import { RecordingMedia } from "./RecordingMedia";
 import { MeetingTabs, type MeetingTab } from "./MeetingTabs";
 import { RestartProcessing } from "./RestartProcessing";
+import { AddParticipants } from "./AddParticipants";
 import { reprocessMeeting } from "../actions";
 
 type Person = { name: string; email: string | null };
@@ -70,6 +74,13 @@ export default async function MeetingPage({
   if (botStatus === "done" && !meeting.recordingPath) {
     meeting = (await getMeeting(id)) ?? meeting;
   }
+
+  // A processing run that died without saying so still reads as "analyzing"
+  // forever. An OOM kill runs no catch block and a missing transcription
+  // callback never arrives, so a deadline is the only thing that can tell those
+  // apart from work still in progress. Checked here, alongside the bot sync,
+  // because this is where someone comes to find out what happened.
+  meeting = await failIfStalled(meeting);
 
   const hasRecording = Boolean(meeting.recordingPath);
   const processing =
@@ -132,6 +143,7 @@ export default async function MeetingPage({
     speakers.length > 0 &&
     (meeting.status === "completed" || meeting.status === "failed");
   let people: Person[] = [];
+  let voiceWindowsReady = false;
   if (showSpeakerMapping) {
     const byEmail = new Map<string, Person>();
     const byName = new Map<string, Person>();
@@ -162,6 +174,10 @@ export default async function MeetingPage({
     people = [...byEmail.values(), ...byName.values()].sort((a, b) =>
       a.name.localeCompare(b.name),
     );
+
+    // Whether this meeting already has voice vectors, so the panel can offer a
+    // cheap re-match instead of decoding the whole recording again.
+    voiceWindowsReady = await hasVoiceWindows(id);
   }
 
   // Show the transcript with mapped names ("Priya") rather than raw diarization
@@ -172,6 +188,20 @@ export default async function MeetingPage({
   const hasTranscript = Boolean(
     transcript?.utterances?.length || transcript?.fullText?.trim(),
   );
+
+  // People can be added right up until the minutes are written, which is the
+  // moment the list stops being a guest list and starts being a record. That
+  // window covers the whole meeting: recording leaves the status on "ready"
+  // until the audio is saved, so "during" and "before" are the same state here.
+  // Read after the bot sync above, so it reflects the status the page renders.
+  const canAddPeople =
+    meeting.type === "internal" && meeting.status !== "completed";
+
+  // The directory behind the picker. Fetched only when the control is on the
+  // page — a completed meeting has no reason to pull 40 rows it won't show.
+  const addableEmployees = canAddPeople
+    ? (await listEmployees()).filter((e) => e.active)
+    : [];
 
   // Minutes, transcript and speaker mapping used to stack as one long scroll.
   // Group them into tabs instead — only the ones that actually have content.
@@ -208,13 +238,26 @@ export default async function MeetingPage({
       label: "Speakers",
       badge: speakers.length,
       content: (
-        <SpeakerMapping
-          meetingId={id}
-          speakers={speakers}
-          people={people}
-          speakerMap={meeting.speakerMap ?? null}
-          busy={meeting.status !== "completed"}
-        />
+        <>
+          <SpeakerMapping
+            meetingId={id}
+            speakers={speakers}
+            people={people}
+            speakerMap={meeting.speakerMap ?? null}
+            busy={meeting.status !== "completed"}
+          />
+          <VoiceIdentify
+            meetingId={id}
+            hasWindows={voiceWindowsReady}
+            // Windows are cut inside these, so every speaker gets some — see
+            // windowsInTurns. Timings only; no text leaves the server here.
+            turns={(meeting.transcript?.utterances ?? []).map((u) => ({
+              speaker: u.speaker,
+              start: u.start,
+              end: u.end,
+            }))}
+          />
+        </>
       ),
     });
   }
@@ -272,8 +315,11 @@ export default async function MeetingPage({
         </div>
       )}
 
-      {/* Participants — internal meetings only */}
-      {meeting.type === "internal" && invitees.length > 0 && (
+      {/* Participants — internal meetings only.
+          Rendered even with nobody on the list, because this is where you add
+          them: a meeting started without a participant list is exactly the one
+          that needs somewhere to put the people who walk in. */}
+      {meeting.type === "internal" && (invitees.length > 0 || canAddPeople) && (
         <div className="card mb-6 p-5">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
@@ -305,7 +351,28 @@ export default async function MeetingPage({
                 )}
               </span>
             ))}
+            {invitees.length === 0 && (
+              <span className="text-sm text-[var(--color-text-muted)]">
+                Nobody added yet.
+              </span>
+            )}
           </div>
+          {canAddPeople && (
+            <AddParticipants
+              meetingId={id}
+              employees={addableEmployees.map((e) => ({
+                id: e.id,
+                name: e.name,
+                // A synced employee can have no email. Still addable — they
+                // were in the room — they just won't receive the minutes.
+                email: e.email ?? "",
+                position: e.position,
+              }))}
+              existing={invitees.map((p) =>
+                (p.email?.trim() || p.name.trim()).toLowerCase(),
+              )}
+            />
+          )}
         </div>
       )}
 
@@ -364,8 +431,8 @@ export default async function MeetingPage({
                 meetingUrl={meeting.meetingUrl}
                 retry={botFailed}
               />
-              <DeviceRecording>
-                <MeetingRecorder
+              <DeviceRecording meetingId={id}>
+                <RecordingSlotView
                   meetingId={id}
                   meetingType={meeting.type}
                   canSendNoteTaker
@@ -373,7 +440,7 @@ export default async function MeetingPage({
               </DeviceRecording>
             </>
           ) : (
-            <MeetingRecorder meetingId={id} meetingType={meeting.type} />
+            <RecordingSlotView meetingId={id} meetingType={meeting.type} />
           )}
           <AudioImport meetingId={id} />
         </div>

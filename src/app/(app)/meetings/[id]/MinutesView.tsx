@@ -71,6 +71,29 @@ export function MinutesView({
         </Section>
       )}
 
+      {/* Names heard in the conversation who were not invited. Kept apart from
+          the attendee list on purpose: being talked about is not the same as
+          being in the room, and merging the two is what once produced minutes
+          crediting two people who were never on the invite list. */}
+      {(minutes.mentionedNames?.length ?? 0) > 0 && (
+        <Section title="Mentioned in the meeting" delay={150}>
+          <div className="flex flex-wrap gap-2">
+            {minutes.mentionedNames?.map((n, i) => (
+              <span
+                key={i}
+                className="inline-flex items-center rounded-full border border-dashed border-[var(--color-border-strong)] px-3 py-1 text-sm text-[var(--color-text-secondary)]"
+              >
+                {n}
+              </span>
+            ))}
+          </div>
+          <p className="mt-2 text-xs text-[var(--color-text-muted)]">
+            Detected by AI from the conversation — people referred to by name,
+            not attendees.
+          </p>
+        </Section>
+      )}
+
       {minutes.agenda.length > 0 && (
         <Section title="Agenda" delay={180}>
           <ol className="list-decimal space-y-1 pl-5 text-sm text-[var(--color-text-primary)]">
@@ -211,6 +234,15 @@ function toMarkdown(minutes: Minutes, title: string): string {
   lines.push("## Summary", minutes.summary, "");
   if (minutes.attendees.length) {
     lines.push("## Attendees", ...list(minutes.attendees), "");
+  }
+  if (minutes.mentionedNames?.length) {
+    lines.push(
+      "## Mentioned in the meeting",
+      "_Detected from the conversation — not attendees._",
+      "",
+      ...list(minutes.mentionedNames),
+      "",
+    );
   }
   if (minutes.agenda.length) {
     lines.push(

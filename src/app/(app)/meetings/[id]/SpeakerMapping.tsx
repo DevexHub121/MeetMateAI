@@ -55,6 +55,24 @@ export function SpeakerMapping({
                 <div className="mt-0.5 truncate text-xs italic text-[var(--color-text-secondary)]">
                   “{s.sample}”
                 </div>
+                {/* Where the current name came from. Worth showing: a voiceprint
+                    match and a guess from the words are very different claims,
+                    and the reader should be able to tell them apart. */}
+                {current?.source === "voice" && (
+                  <div className="mt-1 inline-flex items-center gap-1 rounded-full bg-[var(--color-elevated)] px-2 py-0.5 text-[11px] text-[var(--color-text-secondary)]">
+                    matched by voice
+                    {typeof current.confidence === "number" && (
+                      <span className="text-[var(--color-text-muted)]">
+                        · {Math.round(current.confidence * 100)}%
+                      </span>
+                    )}
+                  </div>
+                )}
+                {current?.source === "manual" && (
+                  <div className="mt-1 inline-flex items-center rounded-full bg-[var(--color-elevated)] px-2 py-0.5 text-[11px] text-[var(--color-text-secondary)]">
+                    set by hand
+                  </div>
+                )}
               </div>
               <select
                 name="speakerAssignment"

@@ -1,5 +1,5 @@
 import { canViewMeeting, getMeeting } from "@/lib/meetings";
-import { readStoredFile } from "@/lib/storage";
+import { createPresignedGet, readStoredFile } from "@/lib/storage";
 import { getCurrentUser } from "@/lib/auth";
 
 // Map the stored file's extension to the right MIME so <audio> reads duration
@@ -42,28 +42,72 @@ export async function GET(
     return new Response("Not found", { status: 404 });
   }
 
+  const ext = meeting.recordingPath.split(".").pop()?.toLowerCase() ?? "";
+  const contentType = AUDIO_TYPES[ext] ?? "application/octet-stream";
+
+  // ?download=1 → save-to-disk instead of playing inline. Same bytes, same
+  // auth check; only the disposition changes, so the <audio> element and the
+  // download button can share one route.
+  const download = new URL(req.url).searchParams.get("download") === "1";
+  const name = `${safeFilename(meeting.title, `meeting-${id}`)}.${ext}`;
+  const disposition = `${download ? "attachment" : "inline"}; filename="${name}"; filename*=UTF-8''${encodeURIComponent(name)}`;
+  const range = req.headers.get("range");
+
+  // Stream from storage rather than materialising the file.
+  //
+  // This used to read the whole recording into a Buffer and then copy it again
+  // into a Uint8Array — around 172 MB of heap per request for a three-hour
+  // meeting, per concurrent listener. Worse, it advertised `Accept-Ranges: bytes`
+  // while ignoring the Range header entirely, so every seek in the player
+  // re-downloaded the entire file from the beginning. The sibling video route
+  // already does this properly; this is the same approach.
+  const signed = await createPresignedGet(meeting.recordingPath, 900);
+
+  if (signed) {
+    let upstream: Response;
+    try {
+      upstream = await fetch(signed, {
+        // Range forwarded verbatim, so seeking is the storage layer's job.
+        headers: range ? { Range: range } : {},
+        // Closing the tab aborts the upstream fetch instead of leaving us
+        // pulling a file nobody is listening to.
+        signal: req.signal,
+        cache: "no-store",
+      });
+    } catch {
+      return new Response("Recording is unavailable right now", { status: 502 });
+    }
+    if (!upstream.ok || !upstream.body) {
+      return new Response("Not found", { status: 404 });
+    }
+
+    const headers = new Headers({
+      // Overridden rather than passed through: storage serves these as
+      // application/octet-stream, and Firefox and Safari refuse to decode a
+      // media element whose Content-Type isn't an audio type.
+      "Content-Type": contentType,
+      "Accept-Ranges": "bytes",
+      "Content-Disposition": disposition,
+      "Cache-Control": "private, max-age=0, must-revalidate",
+    });
+    for (const h of ["content-length", "content-range"] as const) {
+      const v = upstream.headers.get(h);
+      if (v) headers.set(h, v);
+    }
+
+    // 206 passed through intact — that is what makes seeking work.
+    return new Response(upstream.body, { status: upstream.status, headers });
+  }
+
+  // Local disk (dev, no Spaces): small files, read them.
   try {
     const data = await readStoredFile(meeting.recordingPath);
-    const ext = meeting.recordingPath.split(".").pop()?.toLowerCase() ?? "";
-    const contentType = AUDIO_TYPES[ext] ?? "application/octet-stream";
-    const body = new Uint8Array(data);
-
-    // ?download=1 → save-to-disk instead of playing inline. Same bytes, same
-    // auth check; only the disposition changes, so the <audio> element and the
-    // download button can share one route.
-    const download =
-      new URL(req.url).searchParams.get("download") === "1";
-    const name = `${safeFilename(meeting.title, `meeting-${id}`)}.${ext}`;
-    const disposition = download ? "attachment" : "inline";
-
-    return new Response(body, {
+    return new Response(new Uint8Array(data), {
       headers: {
         "Content-Type": contentType,
-        // Content-Length + Accept-Ranges let the browser show the real duration
-        // and seek within the clip instead of streaming it as unknown-length.
-        "Content-Length": String(body.byteLength),
+        "Content-Length": String(data.byteLength),
         "Accept-Ranges": "bytes",
-        "Content-Disposition": `${disposition}; filename="${name}"; filename*=UTF-8''${encodeURIComponent(name)}`,
+        "Content-Disposition": disposition,
       },
     });
   } catch {

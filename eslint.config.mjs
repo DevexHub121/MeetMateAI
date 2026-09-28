@@ -12,6 +12,11 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Minified ONNX Runtime, copied out of node_modules by
+    // scripts/prepare-voice-assets.mjs. Vendor code we don't author or ship
+    // through the bundler — linting it produced ~345 warnings about generated
+    // output and drowned the real ones.
+    "public/ort/**",
   ]),
 ]);
 
