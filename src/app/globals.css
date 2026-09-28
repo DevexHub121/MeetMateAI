@@ -397,27 +397,52 @@ body::after {
   .eq-bar, .float-slow, .rise { animation: none !important; }
 }
 
-/* ─── Light marketing surface ──────────────────────────────────────
-   The app is charcoal; the public site is bright, in the register of
-   Notta and Otter — white, generous whitespace, a confident indigo
-   accent. Scoped under .site-light so it never touches the app, and
-   opaque so it covers the dark body + aurora behind it. */
+/* ─── MeetMate brand surface ───────────────────────────────────────
+   Taken from the logo: navy "Meet", violet "Mate", a blue character.
+
+   The colour rule the whole system hangs on — blue means people and
+   "you", violet means MeetMate and the AI. Once that holds, a reader
+   can tell at a glance whether a thing on screen is theirs or ours,
+   without a legend. It is also why there are no gradient headlines or
+   gradient buttons here: a gradient is neither voice, and using one
+   for emphasis spends the only signal the palette has.
+
+   Scoped under .site-light so it never leaks into the dark app, and
+   opaque so it covers the body and aurora behind it. */
 .site-light {
-  --l-bg: #ffffff;
-  --l-bg-soft: #f6f7fb;
+  --l-paper: #f7f6f2;
+  --l-bg: var(--l-paper);
+  --l-bg-soft: #fafaf8;
   --l-surface: #ffffff;
-  --l-heading: #0b1220;
-  --l-text: #4a5568;
-  --l-muted: #98a2b3;
-  --l-border: #e9ecf3;
-  --l-border-strong: #d4dae6;
-  --l-accent: #4f46e5;        /* indigo-600 */
-  --l-accent-hover: #4338ca;
-  --l-accent-2: #6366f1;
-  --l-accent-soft: #eef1ff;
-  --l-cyan: #06b6d4;
-  --l-grad: linear-gradient(120deg, #6366f1 0%, #4f46e5 55%, #7c3aed 100%);
-  --l-grad-cta: linear-gradient(120deg, #4f46e5 0%, #6d28d9 100%);
+
+  --l-heading: #0f1d45;       /* navy — headings, primary buttons, dark bands */
+  --l-navy-2: #16275a;        /* cards sitting on a navy band */
+  --l-navy-3: #1a2a5e;        /* video tiles in the hero call */
+  --l-text: #3d4660;
+  --l-muted: #6b7390;
+
+  --l-violet: #7c3aed;        /* MeetMate's voice */
+  --l-violet-2: #8b5cf6;
+  --l-violet-tint: #f0e9ff;
+  --l-blue: #1a8cff;          /* people / "you" */
+  --l-blue-ink: #0b6fd6;      /* blue text on light, contrast-safe */
+  --l-blue-tint: #e6f0ff;
+  --l-highlight: #cfe6ff;
+
+  --l-border: rgba(15, 29, 69, 0.08);
+  --l-border-strong: rgba(15, 29, 69, 0.14);
+
+  /* Kept: the app header's "New meeting" button still uses this. */
+  --l-grad: linear-gradient(100deg, #7c3aed, #4f46e5 55%, #0891b2);
+
+  --l-shadow-float: 0 30px 60px -40px rgba(15, 29, 69, 0.45);
+  --l-shadow-small: 0 10px 30px -18px rgba(15, 29, 69, 0.5);
+
+  /* Full-bleed: sections run edge to edge and content is inset by this
+     alone, so the page fills a 2560px screen instead of stranding it
+     either side of a centred column. */
+  --l-pad: clamp(20px, 4.5vw, 88px);
+  --l-section-y: clamp(88px, 8vw, 150px);
 
   position: relative;
   z-index: 0;
@@ -426,40 +451,45 @@ body::after {
   background: var(--l-bg);
   font-family: var(--font-instrument), system-ui, sans-serif;
 }
-/* Soft blue-violet auras behind the light hero, very subtle. */
-.site-light .aura {
-  position: absolute;
-  border-radius: 9999px;
-  filter: blur(64px);
-  opacity: 0.5;
-  pointer-events: none;
-  z-index: -1;
-}
+
 .site-light .l-btn-primary {
   display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
-  border-radius: 0.75rem; font-weight: 600; color: #fff;
-  background: var(--l-accent);
-  box-shadow: 0 1px 2px rgba(16,24,40,0.08), 0 8px 24px -12px rgba(79,70,229,0.6);
-  transition: background 0.15s, transform 0.15s, box-shadow 0.15s;
+  border-radius: 99px; font-weight: 600; color: #fff;
+  background: var(--l-heading);
+  transition: background 0.15s, transform 0.15s;
 }
-.site-light .l-btn-primary:hover { background: var(--l-accent-hover); transform: translateY(-1px); }
+.site-light .l-btn-primary:hover { background: var(--l-violet); transform: translateY(-1px); }
 .site-light .l-btn-ghost {
   display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
-  border-radius: 0.75rem; font-weight: 600; color: var(--l-heading);
+  border-radius: 99px; font-weight: 600; color: var(--l-heading);
   background: #fff; border: 1px solid var(--l-border-strong);
   transition: border-color 0.15s, background 0.15s, transform 0.15s;
 }
-.site-light .l-btn-ghost:hover { background: var(--l-bg-soft); transform: translateY(-1px); }
+.site-light .l-btn-ghost:hover { border-color: var(--l-heading); transform: translateY(-1px); }
 .site-light .l-card {
   background: var(--l-surface);
   border: 1px solid var(--l-border);
-  border-radius: 1rem;
-  box-shadow: 0 1px 2px rgba(16,24,40,0.04);
-}
-.site-light .l-grad-text {
-  background: var(--l-grad); -webkit-background-clip: text; background-clip: text; color: transparent;
+  border-radius: 22px;
 }
 .site-light .l-eyebrow {
   font-size: 0.75rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
-  color: var(--l-accent);
+  color: var(--l-violet);
+}
+
+/* ─── Brand motion ─────────────────────────────────────────────────
+   Three loops the hero demo needs. Each is decorative — every one of
+   them conveys "this is live" and nothing a reader would lose by not
+   seeing it, which is why they all stop under reduced motion rather
+   than being slowed down. */
+@keyframes eq   { 0%, 100% { transform: scaleY(0.3); } 50% { transform: scaleY(1); } }
+@keyframes ring { 0%, 100% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.55); }
+                  50%      { box-shadow: 0 0 0 14px rgba(139, 92, 246, 0); } }
+@keyframes blink { 50% { opacity: 0.35; } }
+
+.eq-bar-b { animation: eq 0.9s ease-in-out infinite; transform-origin: bottom; }
+.ring-pulse { animation: ring 2s ease-out infinite; }
+.blink { animation: blink 1.4s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .eq-bar-b, .ring-pulse, .blink { animation: none !important; }
 }

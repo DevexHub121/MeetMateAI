@@ -1,5 +1,8 @@
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
+import Image from "next/image";
+import { HeroDemo } from "@/components/landing/HeroDemo";
+import { FaqList } from "@/components/landing/FaqList";
 import { MeetMateMark } from "@/components/MeetMateMark";
 
 export const dynamic = "force-dynamic";
@@ -61,393 +64,393 @@ export default async function Landing() {
 
   return (
     <div className="site-light">
-      {/* Nav */}
-      <header className="sticky top-0 z-50 border-b border-[var(--l-border)] bg-white/80 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-3.5">
-          <Link href="/" className="flex items-center gap-2.5">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg text-white" style={{ background: "var(--l-grad)" }}>
-              <MeetMateMark size={18} mono />
-            </span>
-            <span className="text-lg font-bold tracking-tight text-[var(--l-heading)]">MeetMate</span>
+      {/* ── Header ─────────────────────────────────────────────────── */}
+      <header
+        className="sticky top-0 z-50 border-b border-[var(--l-border)]"
+        style={{ background: "rgba(247,246,242,.88)", backdropFilter: "blur(14px)" }}
+      >
+        <div className="flex items-center justify-between gap-6" style={{ padding: "14px var(--l-pad)" }}>
+          <Link href="/" className="flex shrink-0 items-center gap-2.5">
+            <Image src="/brand/meetmate-mark.png" alt="" width={47} height={36} className="h-9 w-auto" priority />
+            <Image src="/brand/meetmate-wordmark.png" alt="MeetMate" width={137} height={22} className="h-[22px] w-auto" priority />
           </Link>
-          <nav className="hidden items-center gap-8 text-sm font-medium text-[var(--l-text)] md:flex">
-            <a href="#features" className="hover:text-[var(--l-heading)]">Features</a>
-            <a href="#how" className="hover:text-[var(--l-heading)]">How it works</a>
-            <a href="#pricing" className="hover:text-[var(--l-heading)]">Pricing</a>
-            <a href="#faq" className="hover:text-[var(--l-heading)]">FAQ</a>
+
+          <nav className="hidden items-center gap-1 md:flex">
+            {[["#how", "How it works"], ["#features", "Features"], ["#pricing", "Pricing"], ["#faq", "FAQ"]].map(([href, label]) => (
+              <a key={href} href={href} className="rounded-full px-3.5 py-2 text-[14px] font-medium text-[var(--l-text)] transition-colors hover:bg-[rgba(15,29,69,.06)]">
+                {label}
+              </a>
+            ))}
           </nav>
-          <div className="flex items-center gap-3">
-            {user ? (
-              <Link href="/meetings" className="l-btn-primary px-4 py-2 text-sm">Open app</Link>
-            ) : (
-              <>
-                <Link href="/login" className="hidden text-sm font-semibold text-[var(--l-heading)] hover:text-[var(--l-accent)] sm:inline">Log in</Link>
-                <Link href="/register" className="l-btn-primary px-4 py-2 text-sm">Start for free</Link>
-              </>
+
+          <div className="flex shrink-0 items-center gap-2">
+            {!user && (
+              <Link href="/login" className="hidden rounded-full px-4 py-2 text-[14px] font-semibold text-[var(--l-heading)] transition-colors hover:bg-[rgba(15,29,69,.06)] sm:inline-block">
+                Log in
+              </Link>
             )}
+            <Link href={cta.href} className="l-btn-primary px-4.5 py-2.5 text-[14px]">{cta.label}</Link>
           </div>
         </div>
       </header>
 
-      {/* Hero */}
-      <section className="relative overflow-hidden">
-        <div className="aura h-[26rem] w-[26rem]" style={{ background: "#c7d2fe", top: "-6rem", left: "-4rem" }} />
-        <div className="aura h-[24rem] w-[24rem]" style={{ background: "#ddd6fe", top: "-3rem", right: "-4rem" }} />
-        <div className="mx-auto grid max-w-6xl items-center gap-14 px-5 pt-20 pb-16 lg:grid-cols-[1.02fr_0.98fr] lg:pt-24">
-          <div>
-            <span className="inline-flex items-center gap-2 rounded-full border border-[var(--l-border)] bg-white px-3 py-1 text-xs font-medium text-[var(--l-text)] shadow-sm">
-              <span className="h-1.5 w-1.5 rounded-full bg-[var(--l-accent)]" /> Meets · Zoom · Teams · on-device
-            </span>
-            <h1 className="mt-6 text-[2.75rem] font-extrabold leading-[1.03] tracking-tight text-[var(--l-heading)] sm:text-[3.75rem]">
-              Stop taking notes.<br /><span className="l-grad-text">Let me handle it.</span>
-            </h1>
-            <p className="mt-5 text-xl font-semibold text-[var(--l-heading)]">
-              Your AI meeting memory.
-            </p>
-            {/*
-              Three words, three beats. Spaced dots rather than a sentence
-              because it is a strapline, not a claim — it should scan in one
-              glance and set the order the product actually works in.
-            */}
-            <p className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-sm font-medium uppercase tracking-[0.14em] text-[var(--l-muted)]">
-              <span>Record</span>
-              <span className="text-[var(--l-accent)]">·</span>
-              <span>Understand</span>
-              <span className="text-[var(--l-accent)]">·</span>
-              <span>Remember</span>
-            </p>
-            <p className="mt-6 max-w-lg text-lg leading-relaxed text-[var(--l-text)]">
-              MeetMate joins your calls, transcribes every word, and writes the notes —
-              summary, decisions and action items — before you&rsquo;ve left the room.
-            </p>
-            <div className="mt-8 flex flex-wrap items-center gap-3">
-              <Link href={cta.href} className="l-btn-primary px-6 py-3 text-[15px]">
-                {cta.label} <G d={I.arrow} size={17} />
-              </Link>
-              <a href="#how" className="l-btn-ghost px-6 py-3 text-[15px]">See how it works</a>
-            </div>
-            <p className="mt-4 flex items-center gap-2 text-sm text-[var(--l-muted)]">
-              <span className="text-[var(--l-accent)]"><G d={I.check} size={16} /></span>
-              Free to start · no credit card · ready in two minutes
-            </p>
+      {/* ── Hero ───────────────────────────────────────────────────── */}
+      <section
+        className="flex flex-wrap items-center gap-[clamp(32px,4vw,72px)]"
+        style={{ paddingLeft: "var(--l-pad)", paddingTop: "clamp(56px,6vw,104px)", paddingBottom: "clamp(56px,6vw,104px)" }}
+      >
+        <div style={{ flex: "1 1 440px", maxWidth: 760 }}>
+          <span className="inline-flex items-center gap-2 rounded-full bg-white px-3.5 py-1.5 text-[12.5px] font-medium text-[var(--l-text)]" style={{ boxShadow: "var(--l-shadow-small)" }}>
+            <span className="blink h-1.5 w-1.5 rounded-full bg-[#ef4444]" /> Meets · Zoom · Teams · on-device
+          </span>
+
+          <h1 className="mt-6 font-[family-name:var(--font-display)] font-bold text-[var(--l-heading)]" style={{ fontSize: "clamp(52px,5.8vw,128px)", lineHeight: 0.98, letterSpacing: "-0.03em" }}>
+            Stop taking notes.<br />
+            <span className="text-[var(--l-violet)]">Let me handle it.</span>
+          </h1>
+
+          <p className="mt-6 font-[family-name:var(--font-display)] text-[22px] font-semibold text-[var(--l-heading)]">
+            Your AI meeting memory.
+          </p>
+          {/* Record → Understand → Remember: blue for the part you do, violet
+              for the parts we do. The arrows carry the same rule. */}
+          <p className="mt-2 flex flex-wrap items-center gap-2 text-[15px] font-semibold text-[var(--l-heading)]">
+            Record <span className="text-[var(--l-blue)]">→</span> Understand{" "}
+            <span className="text-[var(--l-violet)]">→</span> Remember
+          </p>
+
+          <p className="mt-6 max-w-xl leading-relaxed text-[var(--l-text)]" style={{ fontSize: "clamp(17px,1.2vw,20px)", lineHeight: 1.6 }}>
+            MeetMate joins your calls, transcribes every word, and writes the notes —
+            summary, decisions and action items — before you&rsquo;ve left the room.
+          </p>
+
+          <div className="mt-8 flex flex-wrap items-center gap-3">
+            <Link href={cta.href} className="l-btn-primary px-6 py-3.5 text-[15px]">
+              {cta.label} <G d={I.arrow} size={17} />
+            </Link>
+            <a href="#how" className="l-btn-ghost px-6 py-3.5 text-[15px]">See how it works</a>
           </div>
-          <HeroMock />
+          <p className="mt-4 text-[14px] text-[var(--l-muted)]">
+            Free to start · no credit card · ready in two minutes
+          </p>
+        </div>
+
+        <div style={{ flex: "1.35 1 620px", minWidth: 0 }}>
+          <HeroDemo />
         </div>
       </section>
 
-      {/* Integration strip */}
-      <section className="border-y border-[var(--l-border)] bg-[var(--l-bg-soft)]">
-        <div className="mx-auto max-w-6xl px-5 py-8">
-          <p className="text-center text-xs font-semibold uppercase tracking-[0.14em] text-[var(--l-muted)]">
-            Captures every call, wherever it happens
-          </p>
-          <div className="mt-5 flex flex-wrap items-center justify-center gap-x-10 gap-y-3">
+      {/* ── Platforms ──────────────────────────────────────────────── */}
+      <section className="border-y border-[var(--l-border)]">
+        <div className="flex flex-wrap items-center justify-between gap-x-10 gap-y-4" style={{ padding: "26px var(--l-pad)" }}>
+          <span className="text-[14px] text-[var(--l-muted)]">Captures every call, wherever it happens</span>
+          <div className="flex flex-wrap items-center gap-x-9 gap-y-3">
             {PLATFORMS.map((p) => (
-              <span key={p} className="text-lg font-bold tracking-tight text-[#9aa3b2]">{p}</span>
+              <span key={p} className="font-[family-name:var(--font-display)] text-[17px] font-semibold text-[var(--l-heading)]">{p}</span>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Feature A — transcript */}
-      <section id="features" className="mx-auto max-w-6xl px-5 py-20 sm:py-28">
-        <div className="grid items-center gap-14 lg:grid-cols-2">
-          <div>
-            <p className="l-eyebrow">Live transcription</p>
-            <h2 className="mt-3 text-3xl font-extrabold leading-tight tracking-tight text-[var(--l-heading)] sm:text-[2.5rem]">
-              Every word, captured and attributed.
-            </h2>
-            <p className="mt-5 text-lg leading-relaxed text-[var(--l-text)]">
-              MeetMate transcribes the whole conversation as it happens — each line tagged to the right
-              speaker, timestamped, and searchable the instant the call ends. Skim an hour in seconds.
-            </p>
-            <ul className="mt-7 space-y-3">
-              {["Speaker-attributed, in real time", "Searchable across every meeting", "No plugin — it just joins the call"].map((t) => (
-                <li key={t} className="flex items-center gap-3 text-[15px] text-[var(--l-heading)]">
-                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--l-accent-soft)] text-[var(--l-accent)]"><G d={I.check} size={14} /></span>{t}
-                </li>
-              ))}
-            </ul>
-          </div>
-          <TranscriptMock />
+      {/* ── How it works ───────────────────────────────────────────── */}
+      <section id="how" style={{ padding: "var(--l-section-y) var(--l-pad)" }}>
+        <div className="flex flex-wrap items-end justify-between gap-6">
+          <h2 className="font-[family-name:var(--font-display)] font-bold text-[var(--l-heading)]" style={{ fontSize: "clamp(40px,4.4vw,84px)", lineHeight: 1, letterSpacing: "-0.03em" }}>
+            Three steps.
+          </h2>
+          <p className="text-[17px] text-[var(--l-text)]">
+            And only the first one is <span className="font-semibold text-[var(--l-blue-ink)]">yours</span>.
+          </p>
         </div>
-      </section>
 
-      {/* Feature B — minutes */}
-      <section className="bg-[var(--l-bg-soft)]">
-        <div className="mx-auto max-w-6xl px-5 py-20 sm:py-28">
-          <div className="grid items-center gap-14 lg:grid-cols-2">
-            <MinutesMock />
-            <div className="lg:order-2">
-              <p className="l-eyebrow">AI notes</p>
-              <h2 className="mt-3 text-3xl font-extrabold leading-tight tracking-tight text-[var(--l-heading)] sm:text-[2.5rem]">
-                The notes you&rsquo;d have written — if you had the time.
-              </h2>
-              <p className="mt-5 text-lg leading-relaxed text-[var(--l-text)]">
-                Not a wall of transcript. A clean read: what was decided, who owns what, and what
-                happens next — pulled from the full conversation and emailed to everyone who was there.
-              </p>
-              <ul className="mt-7 space-y-3">
-                {["A summary anyone can skim", "Every decision, in plain language", "Action items with an owner and a due date"].map((t) => (
-                  <li key={t} className="flex items-center gap-3 text-[15px] text-[var(--l-heading)]">
-                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--l-accent-soft)] text-[var(--l-accent)]"><G d={I.check} size={14} /></span>{t}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Value grid */}
-      <section className="mx-auto max-w-6xl px-5 py-20 sm:py-28">
-        <div className="mx-auto max-w-2xl text-center">
-          <p className="l-eyebrow">Why teams switch</p>
-          <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-[var(--l-heading)] sm:text-[2.5rem]">Built to disappear into your day.</h2>
-        </div>
-        <div className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {VALUES.map((v) => (
-            <div key={v.t} className="l-card p-6 transition-transform hover:-translate-y-1">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl text-[var(--l-accent)]" style={{ background: "var(--l-accent-soft)" }}>
-                <G d={v.icon} />
+        <div className="mt-12 grid gap-6" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))" }}>
+          {STEPS.map((s, i) => (
+            <article key={s.n} className="overflow-hidden rounded-[28px] bg-white" style={{ border: "1px solid var(--l-border)" }}>
+              <div className="grid min-h-[210px] place-items-center p-6" style={{ background: i === 0 ? "var(--l-blue-tint)" : "var(--l-violet-tint)" }}>
+                {i === 0 && (
+                  <div className="flex w-full max-w-[300px] items-center gap-2 rounded-full bg-white p-1.5 pl-4" style={{ boxShadow: "var(--l-shadow-small)" }}>
+                    <span className="min-w-0 flex-1 truncate font-mono text-[12.5px] text-[var(--l-text)]">meet.google.com/qdr-kxyz-fmn</span>
+                    <span className="rounded-full bg-[var(--l-heading)] px-3.5 py-1.5 text-[12.5px] font-semibold text-white">Add</span>
+                  </div>
+                )}
+                {i === 1 && (
+                  <div className="w-full max-w-[300px] space-y-2.5">
+                    <div className="flex items-center gap-2.5 rounded-2xl bg-white px-3 py-2.5" style={{ boxShadow: "var(--l-shadow-small)" }}>
+                      {/* Dark tile, so the drawn mark in white rather than the
+                          navy PNG, which would vanish into it. */}
+                      <span className="ring-pulse grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#2b2070] text-white">
+                        <MeetMateMark size={18} mono />
+                      </span>
+                      <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-[var(--l-heading)]">MeetMate <span className="font-normal text-[var(--l-muted)]">joined the call</span></span>
+                      <span className="flex items-end gap-[2px]" aria-hidden>
+                        {[7, 11, 8].map((h, k) => (
+                          <span key={k} className="eq-bar-b w-[2px] rounded-full bg-[var(--l-violet)]" style={{ height: h, animationDelay: `${k * 0.12}s` }} />
+                        ))}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2.5 rounded-2xl bg-white/55 px-3 py-2.5 opacity-60">
+                      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#9cc9ff] text-[12px] font-bold text-[#0f1d45]">P</span>
+                      <span className="text-[13px] text-[var(--l-muted)]">Priya Nair · Host</span>
+                    </div>
+                  </div>
+                )}
+                {i === 2 && (
+                  <div className="w-full max-w-[300px] space-y-2.5">
+                    <div className="flex items-center gap-2.5 rounded-2xl bg-white px-3 py-3" style={{ boxShadow: "var(--l-shadow-small)" }}>
+                      <span className="h-2 w-2 shrink-0 rounded-full bg-[var(--l-violet)]" />
+                      <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-[var(--l-heading)]">Notes: Q3 Planning · Product</span>
+                    </div>
+                    <div className="flex items-center gap-2.5 rounded-2xl bg-white/55 px-3 py-3 opacity-60">
+                      <span className="h-2 w-2 shrink-0 rounded-full bg-transparent" />
+                      <span className="text-[13px] text-[var(--l-muted)]">Notes: Design review</span>
+                    </div>
+                  </div>
+                )}
               </div>
-              <h3 className="mt-5 text-base font-bold text-[var(--l-heading)]">{v.t}</h3>
-              <p className="mt-1.5 text-sm leading-relaxed text-[var(--l-text)]">{v.b}</p>
-            </div>
+
+              <div className="p-6">
+                <div className="flex items-center gap-2.5">
+                  <span className="grid h-7 w-7 place-items-center rounded-full text-[13px] font-bold text-white" style={{ background: i === 0 ? "var(--l-blue)" : "var(--l-violet)" }}>{s.n}</span>
+                  <span className="text-[12px] font-semibold uppercase tracking-[0.1em]" style={{ color: i === 0 ? "var(--l-blue-ink)" : "var(--l-violet)" }}>
+                    {i === 0 ? "You" : "MeetMate"}
+                  </span>
+                </div>
+                <h3 className="mt-3 font-[family-name:var(--font-display)] text-[24px] font-semibold text-[var(--l-heading)]" style={{ letterSpacing: "-0.02em" }}>{s.t}</h3>
+                <p className="mt-2 text-[15px] leading-relaxed text-[var(--l-text)]">{s.b}</p>
+              </div>
+            </article>
           ))}
         </div>
       </section>
 
-      {/* How it works */}
-      <section id="how" className="border-y border-[var(--l-border)] bg-[var(--l-bg-soft)]">
-        <div className="mx-auto max-w-6xl px-5 py-20 sm:py-28">
-          <div className="mx-auto max-w-2xl text-center">
-            <p className="l-eyebrow">How it works</p>
-            <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-[var(--l-heading)] sm:text-[2.5rem]">From call to notes in three steps.</h2>
-            <p className="mt-4 text-lg text-[var(--l-text)]">And only the first one is yours.</p>
+      {/* ── Features ───────────────────────────────────────────────── */}
+      <section id="features" className="bg-white">
+        {/* A — search. Panel bleeds right. */}
+        <div className="flex flex-wrap items-center gap-[clamp(32px,4vw,72px)]" style={{ paddingLeft: "var(--l-pad)", paddingTop: "var(--l-section-y)" }}>
+          <div style={{ flex: "1 1 400px", maxWidth: 620 }}>
+            <span className="l-eyebrow" style={{ color: "var(--l-blue-ink)" }}>Search</span>
+            <h2 className="mt-4 font-[family-name:var(--font-display)] font-bold text-[var(--l-heading)]" style={{ fontSize: "clamp(36px,3.6vw,68px)", lineHeight: 1.02, letterSpacing: "-0.03em" }}>
+              Find the moment,<br />not the meeting.
+            </h2>
+            <p className="mt-5 max-w-lg text-[17px] leading-relaxed text-[var(--l-text)]">
+              Every word is indexed the moment a call ends. Type what you half-remember and
+              land on the sentence, with who said it and when.
+            </p>
+            <div className="mt-6 flex flex-wrap gap-2.5">
+              {["Speaker-attributed", "Across every meeting", "Jump to the timestamp"].map((c) => (
+                <span key={c} className="rounded-full bg-[var(--l-blue-tint)] px-3.5 py-2 text-[13px] font-medium text-[var(--l-blue-ink)]">{c}</span>
+              ))}
+            </div>
           </div>
-          <div className="mt-16 grid gap-8 md:grid-cols-3">
-            {STEPS.map((s) => (
-              <div key={s.n} className="l-card p-7 text-center">
-                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full text-lg font-bold text-white" style={{ background: "var(--l-grad)" }}>{s.n}</div>
-                <h3 className="mt-5 text-lg font-bold text-[var(--l-heading)]">{s.t}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-[var(--l-text)]">{s.b}</p>
+
+          <div style={{ flex: "1.1 1 520px", minWidth: 0 }}>
+            <div className="rounded-[36px_0_0_36px] bg-[var(--l-blue-tint)] p-[clamp(20px,2.4vw,44px)]">
+              <div className="rounded-[22px] bg-white p-5" style={{ boxShadow: "var(--l-shadow-float)" }}>
+                <div className="flex items-center gap-2 rounded-[10px] px-3.5 py-2.5" style={{ border: "2px solid var(--l-blue)" }}>
+                  <span className="text-[var(--l-blue)]"><G d={I.search} size={16} /></span>
+                  <span className="text-[14px] text-[var(--l-heading)]">release notes</span>
+                </div>
+                <div className="mt-4 space-y-3.5">
+                  {[
+                    { w: "Marcus", bg: "#ffd08a", m: "Q3 Planning · Product", ts: "12:04", pre: "All clear. I'll own the ", post: "." },
+                    { w: "Priya", bg: "#9cc9ff", m: "Launch sync", ts: "04:17", pre: "Can we get the ", post: " by Thursday?" },
+                    { w: "Ana", bg: "#a8e6cc", m: "Design review", ts: "22:41", pre: "The ", post: " should mention the new flow." },
+                  ].map((r) => (
+                    <div key={r.m} className="flex items-start gap-2.5">
+                      <span className="mt-[2px] grid h-7 w-7 shrink-0 place-items-center rounded-full text-[11px] font-bold text-[#0f1d45]" style={{ background: r.bg }}>{r.w[0]}</span>
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-x-2 text-[11.5px] text-[var(--l-muted)]">
+                          <span className="font-semibold text-[var(--l-heading)]">{r.w}</span>
+                          <span>· {r.m} ·</span>
+                          <span className="font-mono">{r.ts}</span>
+                        </div>
+                        <p className="mt-0.5 text-[13.5px] leading-snug text-[var(--l-text)]">
+                          {r.pre}<mark className="rounded px-0.5" style={{ background: "var(--l-highlight)", color: "var(--l-heading)" }}>release notes</mark>{r.post}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
-            ))}
+            </div>
+          </div>
+        </div>
+
+        {/* B — the email. Panel bleeds left. */}
+        <div className="flex flex-row-reverse flex-wrap items-center gap-[clamp(32px,4vw,72px)]" style={{ paddingRight: "var(--l-pad)", paddingTop: "clamp(56px,6vw,104px)", paddingBottom: "var(--l-section-y)" }}>
+          <div style={{ flex: "1 1 400px", maxWidth: 620 }}>
+            <span className="l-eyebrow">Notes</span>
+            <h2 className="mt-4 font-[family-name:var(--font-display)] font-bold text-[var(--l-heading)]" style={{ fontSize: "clamp(36px,3.6vw,68px)", lineHeight: 1.02, letterSpacing: "-0.03em" }}>
+              In the inbox<br />before you are.
+            </h2>
+            <p className="mt-5 max-w-lg text-[17px] leading-relaxed text-[var(--l-text)]">
+              Summary, decisions and who owes what by when — sent to everyone who was in the
+              room, minutes after it ends. Nobody has to write them up.
+            </p>
+            <div className="mt-6 flex flex-wrap gap-2.5">
+              {["Decisions captured", "Owners and due dates", "Emailed automatically"].map((c) => (
+                <span key={c} className="rounded-full bg-[var(--l-violet-tint)] px-3.5 py-2 text-[13px] font-medium text-[var(--l-violet)]">{c}</span>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ flex: "1.1 1 520px", minWidth: 0 }}>
+            <div className="rounded-[0_36px_36px_0] bg-[var(--l-violet-tint)] p-[clamp(20px,2.4vw,44px)]">
+              <div className="rounded-[22px] bg-white p-5" style={{ boxShadow: "var(--l-shadow-float)" }}>
+                <div className="flex items-center gap-2.5 border-b border-[var(--l-border)] pb-3.5">
+                  <Image src="/brand/meetmate-mark.png" alt="" width={26} height={20} className="h-5 w-auto" />
+                  <span className="text-[13px] font-semibold text-[var(--l-heading)]">MeetMate</span>
+                  <span className="ml-auto font-mono text-[11px] text-[var(--l-muted)]">now</span>
+                </div>
+                <p className="mt-3.5 text-[15px] font-semibold text-[var(--l-heading)]">Notes: Q3 Planning · Product</p>
+                <p className="mt-2 text-[13.5px] leading-relaxed text-[var(--l-text)]">
+                  Launch set for the 14th. Marcus owns release notes and design handoff.
+                  Scope is locked; no blockers.
+                </p>
+                <div className="mt-4 space-y-2.5">
+                  {[["Draft release notes", "Marcus", "Fri"], ["Design handoff", "Ana", "Fri"], ["Send launch comms", "Priya", "Mon"]].map(([t, w, d]) => (
+                    <div key={t} className="flex items-center gap-2.5">
+                      <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--l-violet)]" />
+                      <span className="min-w-0 flex-1 truncate text-[13px] text-[var(--l-heading)]">{t}</span>
+                      <span className="shrink-0 text-[12px] text-[var(--l-muted)]">{w}</span>
+                      <span className="shrink-0 font-mono text-[12px] font-semibold text-[var(--l-violet)]">{d}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Pricing */}
-      <section id="pricing" className="mx-auto max-w-6xl px-5 py-20 sm:py-28">
-        <div className="mx-auto max-w-2xl text-center">
-          <p className="l-eyebrow">Pricing</p>
-          <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-[var(--l-heading)] sm:text-[2.5rem]">Simple pricing that scales with your team.</h2>
-          <p className="mt-4 text-lg text-[var(--l-text)]">Start free. Upgrade once MeetMate has already saved you a meeting&rsquo;s worth of writing.</p>
+      {/* ── Values ─────────────────────────────────────────────────── */}
+      <section className="bg-[var(--l-heading)]" style={{ padding: "var(--l-section-y) var(--l-pad)" }}>
+        <h2 className="max-w-3xl font-[family-name:var(--font-display)] font-bold text-white" style={{ fontSize: "clamp(40px,4.4vw,84px)", lineHeight: 1, letterSpacing: "-0.03em" }}>
+          Built to disappear into your day.
+        </h2>
+        <div className="mt-12 grid gap-5" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))" }}>
+          {VALUES.map((v, i) => (
+            <article key={v.t} className="rounded-[24px] bg-[var(--l-navy-2)] p-6">
+              <span className="grid h-[52px] w-[52px] place-items-center rounded-2xl" style={{ background: i % 2 === 0 ? "var(--l-violet-tint)" : "var(--l-blue-tint)", color: i % 2 === 0 ? "var(--l-violet)" : "var(--l-blue-ink)" }}>
+                <G d={v.icon} size={24} />
+              </span>
+              <h3 className="mt-5 font-[family-name:var(--font-display)] text-[20px] font-semibold text-white" style={{ letterSpacing: "-0.02em" }}>{v.t}</h3>
+              <p className="mt-2 text-[14.5px] leading-relaxed text-white/65">{v.b}</p>
+            </article>
+          ))}
         </div>
-        <div className="mt-14 grid items-start gap-6 lg:grid-cols-3">
+      </section>
+
+      {/* ── Pricing ────────────────────────────────────────────────── */}
+      <section id="pricing" style={{ padding: "var(--l-section-y) var(--l-pad)" }}>
+        <h2 className="font-[family-name:var(--font-display)] font-bold text-[var(--l-heading)]" style={{ fontSize: "clamp(40px,4.4vw,84px)", lineHeight: 1, letterSpacing: "-0.03em" }}>
+          Simple pricing.
+        </h2>
+        <p className="mt-4 max-w-xl text-[17px] text-[var(--l-text)]">
+          Start free. Move up when your team does.
+        </p>
+
+        <div className="mt-12 grid gap-6" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))" }}>
           {PLANS.map((p) => (
-            <div key={p.name}
-              className={`relative rounded-2xl p-7 ${p.hot ? "text-white shadow-2xl shadow-indigo-500/20" : "l-card"}`}
-              style={p.hot ? { background: "var(--l-grad-cta)" } : undefined}>
-              {p.hot && <span className="absolute -top-3 left-7 rounded-full bg-white px-3 py-1 text-xs font-bold text-[var(--l-accent)] shadow-sm">Most popular</span>}
-              <div className={`text-sm font-bold ${p.hot ? "text-white" : "text-[var(--l-heading)]"}`}>{p.name}</div>
-              <p className={`mt-1 text-sm ${p.hot ? "text-indigo-100" : "text-[var(--l-muted)]"}`}>{p.tag}</p>
-              <div className="mt-5 flex items-baseline gap-1.5">
-                <span className={`text-4xl font-extrabold tracking-tight ${p.hot ? "text-white" : "text-[var(--l-heading)]"}`}>{p.price}</span>
-                <span className={`text-sm ${p.hot ? "text-indigo-100" : "text-[var(--l-muted)]"}`}>/ {p.per}</span>
+            <article
+              key={p.name}
+              className="flex flex-col rounded-[28px] p-7"
+              style={p.hot ? { background: "var(--l-heading)" } : { background: "#fff", border: "1px solid var(--l-border)" }}
+            >
+              <div className="flex items-center gap-3">
+                <h3 className="font-[family-name:var(--font-display)] text-[20px] font-semibold" style={{ color: p.hot ? "#fff" : "var(--l-heading)" }}>{p.name}</h3>
+                {p.hot && <span className="rounded-full bg-[var(--l-violet)] px-2.5 py-1 text-[11px] font-semibold text-white">Most popular</span>}
               </div>
-              <Link href={user ? "/meetings" : "/register"}
-                className={`mt-6 flex w-full justify-center rounded-xl px-4 py-2.5 text-sm font-semibold ${p.hot ? "bg-white text-[var(--l-accent)] hover:bg-indigo-50" : "l-btn-primary"}`}>
+              <p className="mt-1 text-[14px]" style={{ color: p.hot ? "rgba(255,255,255,.6)" : "var(--l-muted)" }}>{p.tag}</p>
+
+              <div className="mt-6 flex items-baseline gap-2">
+                <span className="font-[family-name:var(--font-display)] font-bold" style={{ fontSize: "clamp(48px,3.6vw,64px)", lineHeight: 1, letterSpacing: "-0.03em", color: p.hot ? "#fff" : "var(--l-heading)" }}>{p.price}</span>
+                <span className="text-[13.5px]" style={{ color: p.hot ? "rgba(255,255,255,.55)" : "var(--l-muted)" }}>{p.per}</span>
+              </div>
+
+              <ul className="mt-6 flex-1 space-y-3">
+                {p.feats.map((f) => (
+                  <li key={f} className="flex items-start gap-2.5 text-[14.5px]" style={{ color: p.hot ? "rgba(255,255,255,.85)" : "var(--l-text)" }}>
+                    <span className="mt-[3px] shrink-0" style={{ color: p.hot ? "var(--l-violet-2)" : "var(--l-violet)" }}><G d={I.check} size={15} /></span>
+                    {f}
+                  </li>
+                ))}
+              </ul>
+
+              <Link
+                href={cta.href}
+                className="mt-7 inline-flex items-center justify-center rounded-full px-5 py-3 text-[14.5px] font-semibold transition-colors"
+                style={p.hot ? { background: "#fff", color: "var(--l-heading)" } : { background: "var(--l-heading)", color: "#fff" }}
+              >
                 {p.cta}
               </Link>
-              <ul className={`mt-7 space-y-3 border-t pt-6 ${p.hot ? "border-white/20" : "border-[var(--l-border)]"}`}>
-                {p.feats.map((f) => (
-                  <li key={f} className={`flex items-start gap-2.5 text-sm ${p.hot ? "text-indigo-50" : "text-[var(--l-text)]"}`}>
-                    <span className={p.hot ? "text-white" : "text-[var(--l-accent)]"}><G d={I.check} size={15} /></span>{f}
-                  </li>
-                ))}
-              </ul>
-            </div>
+            </article>
           ))}
         </div>
       </section>
 
-      {/* FAQ */}
-      <section id="faq" className="border-t border-[var(--l-border)] bg-[var(--l-bg-soft)]">
-        <div className="mx-auto max-w-3xl px-5 py-20 sm:py-28">
-          <div className="text-center">
-            <p className="l-eyebrow">Questions</p>
-            <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-[var(--l-heading)] sm:text-[2.5rem]">Good questions, answered.</h2>
-          </div>
-          <div className="mt-12 space-y-3">
-            {FAQ.map((f) => (
-              <details key={f.q} className="group l-card px-5 py-4">
-                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-[15px] font-semibold text-[var(--l-heading)]">
-                  {f.q}
-                  <span className="shrink-0 text-[var(--l-accent)] transition-transform group-open:rotate-45"><G d={I.plus} size={18} /></span>
-                </summary>
-                <p className="mt-3 text-sm leading-relaxed text-[var(--l-text)]">{f.a}</p>
-              </details>
-            ))}
+      {/* ── FAQ ────────────────────────────────────────────────────── */}
+      <section id="faq" className="bg-white">
+        <div className="flex flex-wrap gap-[clamp(32px,4vw,72px)]" style={{ padding: "var(--l-section-y) var(--l-pad)" }}>
+          <h2 className="font-[family-name:var(--font-display)] font-bold text-[var(--l-heading)]" style={{ flex: "1 1 320px", fontSize: "clamp(40px,4.4vw,84px)", lineHeight: 1, letterSpacing: "-0.03em" }}>
+            Questions,<br />answered.
+          </h2>
+          <div style={{ flex: "1.4 1 460px", minWidth: 0 }}>
+            <FaqList items={FAQ} />
           </div>
         </div>
       </section>
 
-      {/* CTA band */}
-      <section className="mx-auto max-w-6xl px-5 py-16">
-        <div className="relative overflow-hidden rounded-3xl px-6 py-16 text-center sm:py-20" style={{ background: "var(--l-grad-cta)" }}>
-          <div className="absolute -right-16 -top-20 h-64 w-64 rounded-full bg-white/10 blur-2xl" />
-          <div className="absolute -left-16 -bottom-20 h-64 w-64 rounded-full bg-white/10 blur-2xl" />
-          <div className="relative">
-            <div className="mx-auto mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/15 text-white backdrop-blur"><MeetMateMark size={28} mono /></div>
-            <h2 className="text-3xl font-extrabold tracking-tight text-white sm:text-[2.75rem]">Give your team back the meeting.</h2>
-            <p className="mx-auto mt-4 max-w-xl text-lg text-indigo-100">Set up your workspace in two minutes and let MeetMate handle the notes — starting with your next call.</p>
-            <div className="mt-8 flex items-center justify-center gap-3">
-              <Link href={cta.href} className="rounded-xl bg-white px-7 py-3 text-[15px] font-semibold text-[var(--l-accent)] shadow-sm transition-transform hover:-translate-y-0.5">{cta.label}</Link>
-              <Link href="/login" className="rounded-xl border border-white/40 px-7 py-3 text-[15px] font-semibold text-white transition-colors hover:bg-white/10">Log in</Link>
+      {/* ── CTA ────────────────────────────────────────────────────── */}
+      <section className="overflow-hidden bg-[var(--l-violet-tint)]">
+        <div className="flex flex-wrap items-center gap-8" style={{ padding: "var(--l-section-y) var(--l-pad)" }}>
+          <div style={{ flex: "1 1 420px" }}>
+            <h2 className="font-[family-name:var(--font-display)] font-bold text-[var(--l-heading)]" style={{ fontSize: "clamp(44px,5.4vw,110px)", lineHeight: 0.98, letterSpacing: "-0.03em" }}>
+              Give your team back the meeting.
+            </h2>
+            <p className="mt-6 max-w-lg text-[17px] leading-relaxed text-[var(--l-text)]">
+              Stop splitting your attention between listening and writing. MeetMate does the
+              second one.
+            </p>
+            <div className="mt-8 flex flex-wrap items-center gap-3">
+              <Link href={cta.href} className="l-btn-primary px-6 py-3.5 text-[15px]">
+                {cta.label} <G d={I.arrow} size={17} />
+              </Link>
+              <a href="#pricing" className="l-btn-ghost px-6 py-3.5 text-[15px]">See pricing</a>
             </div>
           </div>
+          <div className="hidden shrink-0 justify-end lg:flex" style={{ flex: "0 1 auto" }}>
+            <Image
+              src="/brand/meetmate-mark.png"
+              alt=""
+              width={770}
+              height={590}
+              className="h-auto"
+              style={{ width: "clamp(220px, 26vw, 480px)" }}
+            />
+          </div>
         </div>
       </section>
 
-      {/* Footer */}
+      {/* ── Footer ─────────────────────────────────────────────────── */}
       <footer className="border-t border-[var(--l-border)]">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-5 px-5 py-10 sm:flex-row">
-          <div className="flex items-center gap-2.5">
-            <span className="flex h-7 w-7 items-center justify-center rounded-md text-white" style={{ background: "var(--l-grad)" }}><MeetMateMark size={15} mono /></span>
-            <span className="font-bold text-[var(--l-heading)]">MeetMate</span>
-            <span className="text-sm text-[var(--l-muted)]">— AI notes for every meeting</span>
+        <div className="flex flex-wrap items-center justify-between gap-6" style={{ padding: "36px var(--l-pad)" }}>
+          <div>
+            <Image src="/brand/meetmate-wordmark.png" alt="MeetMate" width={137} height={22} className="h-[20px] w-auto" />
+            <p className="mt-2 text-[13.5px] text-[var(--l-muted)]">AI notes for every meeting</p>
           </div>
-          <div className="flex items-center gap-6 text-sm font-medium text-[var(--l-text)]">
-            <a href="#features" className="hover:text-[var(--l-accent)]">Features</a>
-            <a href="#pricing" className="hover:text-[var(--l-accent)]">Pricing</a>
-            <Link href="/login" className="hover:text-[var(--l-accent)]">Log in</Link>
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-[13.5px] text-[var(--l-text)]">
+            <a href="#how" className="hover:text-[var(--l-violet)]">How it works</a>
+            <a href="#features" className="hover:text-[var(--l-violet)]">Features</a>
+            <a href="#pricing" className="hover:text-[var(--l-violet)]">Pricing</a>
+            <a href="#faq" className="hover:text-[var(--l-violet)]">FAQ</a>
           </div>
-          <span className="text-xs text-[var(--l-muted)]">
+          <span className="text-[12.5px] text-[var(--l-muted)]">
             © {new Date().getFullYear()} MeetMate · meetmate.devexhub.com · Built by{" "}
-            <a
-              href="https://devexhub.com"
-              className="font-medium text-[var(--l-text)] transition-colors hover:text-[var(--l-accent)]"
-            >
-              Devex Hub
-            </a>
+            <a href="https://devexhub.com" className="font-medium text-[var(--l-text)] hover:text-[var(--l-violet)]">Devex Hub</a>
           </span>
         </div>
       </footer>
-    </div>
-  );
-}
-
-// ── Hero mock: app window with a live capture ────────────────────────────────
-function HeroMock() {
-  const bars = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
-  return (
-    <div className="relative">
-      <div className="aura h-72 w-72" style={{ background: "#a5b4fc", right: "2rem", top: "2rem", opacity: 0.4 }} />
-      <div className="l-card float-slow relative overflow-hidden p-2 shadow-2xl shadow-indigo-500/10">
-        <div className="flex items-center gap-1.5 px-3 py-2">
-          <span className="h-2.5 w-2.5 rounded-full bg-[#e5e8ef]" /><span className="h-2.5 w-2.5 rounded-full bg-[#e5e8ef]" /><span className="h-2.5 w-2.5 rounded-full bg-[#e5e8ef]" />
-          <span className="ml-auto flex items-center gap-1.5 text-[11px] font-medium text-[var(--l-muted)]"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-500" /> Recording</span>
-        </div>
-        <div className="rounded-xl bg-[var(--l-bg-soft)] p-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl text-white" style={{ background: "var(--l-grad)" }}><MeetMateMark size={20} mono /></div>
-            <div className="flex-1">
-              <div className="text-sm font-bold text-[var(--l-heading)]">Q3 Planning · Product</div>
-              <div className="text-[11px] text-[var(--l-muted)]">4 participants · 12:04</div>
-            </div>
-            <div className="flex h-7 items-end gap-[3px]">
-              {bars.map((b) => (
-                <span key={b} className="eq-bar w-[3px] rounded-full" style={{ height: "100%", background: "var(--l-accent)", animationDelay: `${(b % 5) * 100}ms` }} />
-              ))}
-            </div>
-          </div>
-          <div className="mt-4 space-y-2.5">
-            {[{ s: "Priya", c: "Let's lock the launch for the 14th.", a: true }, { s: "Marcus", c: "Works — I'll own the release notes.", a: false }].map((l) => (
-              <div key={l.s} className="flex gap-2.5">
-                <span className={`mt-0.5 shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-bold ${l.a ? "bg-[var(--l-accent-soft)] text-[var(--l-accent)]" : "bg-white text-[var(--l-muted)]"}`}>{l.s}</span>
-                <span className="text-[13px] leading-relaxed text-[var(--l-heading)]">{l.c}</span>
-              </div>
-            ))}
-          </div>
-          <div className="mt-4 rounded-xl border border-[var(--l-border)] bg-white p-3">
-            <div className="flex items-center gap-2">
-              <span className="rounded-full px-2 py-0.5 text-[10px] font-bold text-white" style={{ background: "var(--l-grad)" }}>Action item</span>
-              <span className="text-[11px] text-[var(--l-muted)]">auto-captured</span>
-            </div>
-            <p className="mt-2 text-[13px] text-[var(--l-heading)]"><span className="font-semibold">Marcus</span> — draft release notes<span className="text-[var(--l-muted)]"> · due Fri</span></p>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── Transcript mock ──────────────────────────────────────────────────────────
-function TranscriptMock() {
-  const lines = [
-    { s: "Priya", c: "Let's lock the launch for the 14th — anyone blocked?", a: true },
-    { s: "Marcus", c: "All clear. I'll own the release notes.", a: false },
-    { s: "Ana", c: "Design hands off Friday, so we're good.", a: false },
-    { s: "Priya", c: "Perfect. I'll send the comms Monday.", a: true },
-  ];
-  return (
-    <div className="relative">
-      <div className="aura h-64 w-64" style={{ background: "#ddd6fe", left: "1rem", top: "1rem", opacity: 0.4 }} />
-      <div className="l-card relative p-5 shadow-xl shadow-indigo-500/5">
-        <div className="mb-4 flex items-center justify-between">
-          <span className="text-sm font-bold text-[var(--l-heading)]">Live transcript</span>
-          <span className="rounded-full bg-[var(--l-accent-soft)] px-2 py-0.5 text-[11px] font-semibold text-[var(--l-accent)]">32:04</span>
-        </div>
-        <div className="space-y-3.5">
-          {lines.map((l, i) => (
-            <div key={i} className="flex gap-3">
-              <span className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${l.a ? "text-white" : "bg-[var(--l-bg-soft)] text-[var(--l-muted)]"}`} style={l.a ? { background: "var(--l-grad)" } : undefined}>{l.s[0]}</span>
-              <div>
-                <div className="text-[11px] font-semibold text-[var(--l-muted)]">{l.s}</div>
-                <div className="text-[13.5px] leading-relaxed text-[var(--l-heading)]">{l.c}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── Minutes mock ─────────────────────────────────────────────────────────────
-function MinutesMock() {
-  return (
-    <div className="relative">
-      <div className="aura h-64 w-64" style={{ background: "#c7d2fe", right: "1rem", bottom: "1rem", opacity: 0.4 }} />
-      <div className="l-card relative p-6 shadow-xl shadow-indigo-500/5">
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="text-base font-bold text-[var(--l-heading)]">Q3 Planning · Product</div>
-            <div className="text-xs text-[var(--l-muted)]">Tue 8 Jul · 32 min · 4 attendees</div>
-          </div>
-          <span className="rounded-full px-2.5 py-1 text-[11px] font-bold text-white" style={{ background: "var(--l-grad)" }}>Notes</span>
-        </div>
-        <div className="mt-6 space-y-5 text-sm">
-          <div>
-            <div className="text-[11px] font-bold uppercase tracking-wider text-[var(--l-muted)]">Summary</div>
-            <p className="mt-1.5 leading-relaxed text-[var(--l-text)]">The team set the launch date and split ownership across release notes and design handoff. Scope is locked; no blockers.</p>
-          </div>
-          <div>
-            <div className="text-[11px] font-bold uppercase tracking-wider text-[var(--l-muted)]">Action items</div>
-            <div className="mt-2 space-y-2">
-              {[{ w: "Marcus", t: "Draft release notes", d: "Fri" }, { w: "Ana", t: "Design handoff", d: "Fri" }, { w: "Priya", t: "Send launch comms", d: "Mon" }].map((a) => (
-                <div key={a.w} className="flex items-center gap-3 rounded-lg bg-[var(--l-bg-soft)] px-3 py-2">
-                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--l-accent-soft)] text-[10px] font-bold text-[var(--l-accent)]">{a.w[0]}</span>
-                  <span className="flex-1 text-[13px] font-medium text-[var(--l-heading)]">{a.t}</span>
-                  <span className="text-[11px] text-[var(--l-muted)]">{a.d}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
