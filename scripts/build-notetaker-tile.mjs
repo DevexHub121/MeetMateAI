@@ -32,19 +32,42 @@ const H = 1440;
 const CHROME =
   "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 
-/** The MeetMate mark (src/components/MeetMateMark.tsx): a note card with a voice
- *  soundwave, without the tile background. */
-const MARK = `
-<svg viewBox="0 0 64 64" width="420" height="420" fill="none"
-     xmlns="http://www.w3.org/2000/svg">
-  <rect x="12" y="10" width="40" height="44" rx="10"
-        stroke="#f4f4f2" stroke-width="3.2"/>
-  <g stroke="#f4f4f2" stroke-width="3.2" stroke-linecap="round">
-    <line x1="24" y1="28" x2="24" y2="36"/>
-    <line x1="32" y1="22" x2="32" y2="42"/>
-    <line x1="40" y1="26" x2="40" y2="38"/>
-  </g>
-</svg>`;
+/**
+ * The real MeetMate mark, embedded as a data URI.
+ *
+ * Read from public/brand at build time and inlined rather than linked: the
+ * page is written to a temp directory and opened from there, so a relative
+ * path would not resolve, and a file:// URL is a race against the screenshot
+ * the same way the webfonts were. Inlining leaves nothing for the render to
+ * wait on.
+ *
+ * Drawn on black, so the logo's own navy is too dark to read. It is rendered
+ * as a white silhouette via a CSS mask — the same reason the app uses the mono
+ * glyph on dark tiles.
+ */
+const MARK_SRC = join(ROOT, "public/brand/meetmate-mark.png");
+const MARK = `<div class="logo"></div>`;
+
+/**
+ * A clean silhouette to mask with.
+ *
+ * The supplied cut-out is not fully transparent: 86k of its background pixels
+ * carry an alpha between 1 and 39 — invisible on a white page, a pale rectangle
+ * once you paint it white on black. Thresholding forces every pixel to either
+ * fully on or fully off, so what is left is the logo's shape and nothing else.
+ *
+ * Worth replacing with a real transparent export or an SVG when the client
+ * sends one; this makes the stopgap usable rather than fixing the artwork.
+ */
+const { width: MARK_W, height: MARK_H } = await sharp(MARK_SRC).metadata();
+const MARK_ALPHA = await sharp(MARK_SRC).ensureAlpha().extractChannel(3).threshold(64).toBuffer();
+const MARK_MASK = await sharp({
+  create: { width: MARK_W, height: MARK_H, channels: 3, background: "#ffffff" },
+})
+  .joinChannel(MARK_ALPHA)
+  .png()
+  .toBuffer();
+const MARK_DATA_URI = `data:image/png;base64,${MARK_MASK.toString("base64")}`;
 
 const FONT_CSS_URL =
   "https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600&family=Instrument+Sans:wght@500";
@@ -126,7 +149,19 @@ function page({ status, dotColor }) {
     position: relative; display: flex; flex-direction: column;
     align-items: center; gap: 56px;
   }
-  .mark { display: flex; filter: drop-shadow(0 0 60px rgba(255,255,255,0.16)); }
+  .mark { display: flex; }
+  /* Masked rather than drawn: the supplied artwork is navy and violet on
+     transparent, which on a black tile is very nearly nothing. The mask keeps
+     the shape and paints it in the tile's own off-white. */
+  .logo {
+    width: 560px; height: 429px;
+    background: #f4f4f2;
+    /* On the mask, not the wrapper: from the wrapper it is cast off the div's
+       box and prints a soft rectangle instead of following the silhouette. */
+    filter: drop-shadow(0 0 60px rgba(255, 255, 255, 0.16));
+    -webkit-mask: url("${MARK_DATA_URI}") no-repeat center / contain;
+    mask: url("${MARK_DATA_URI}") no-repeat center / contain;
+  }
   .word {
     font-family: "Bricolage Grotesque", sans-serif;
     font-weight: 600; font-size: 224px; line-height: 1;
