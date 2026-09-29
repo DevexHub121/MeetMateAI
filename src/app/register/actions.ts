@@ -19,15 +19,33 @@ export async function startRegistration(formData: FormData) {
   const adminEmail = String(formData.get("adminEmail") || "").trim().toLowerCase();
   const password = String(formData.get("password") || "");
 
+  /*
+   * Carry everything except the password back on failure.
+   *
+   * This form asks for four things, and a redirect on error emptied all of
+   * them — so "that workspace URL is taken" cost someone their company name,
+   * their own name and their email as well. The password is left out on
+   * purpose: putting it in a URL would leak it into browser history, the
+   * referer header and every log between here and the user.
+   */
+  const back = (message: string) => {
+    const p = new URLSearchParams({ error: message });
+    if (orgName) p.set("orgName", orgName);
+    if (orgSlug) p.set("orgSlug", orgSlug);
+    if (adminName) p.set("adminName", adminName);
+    if (adminEmail) p.set("adminEmail", adminEmail);
+    return `/register?${p.toString()}`;
+  };
+
   if (!orgName || !adminName || !adminEmail || password.length < 8) {
-    redirect("/register?error=" + encodeURIComponent("Fill everything in — password at least 8 characters"));
+    redirect(back("Fill everything in — password at least 8 characters"));
   }
 
   let result;
   try {
     result = await createPendingRegistration({ orgName, orgSlug, adminName, adminEmail, password });
   } catch (err) {
-    redirect("/register?error=" + encodeURIComponent(err instanceof Error ? err.message : "Couldn't start signup"));
+    redirect(back(err instanceof Error ? err.message : "Couldn't start signup"));
   }
 
   const emailed = await sendEmail(adminEmail, "Verify your MeetMate workspace", otpEmail(adminName, result.otpCode));

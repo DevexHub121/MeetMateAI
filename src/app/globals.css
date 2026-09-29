@@ -449,6 +449,19 @@ body::after {
   --l-blue-tint: #e6f0ff;
   --l-highlight: #cfe6ff;
 
+  /*
+   * Kept as aliases for the palette this replaced.
+   *
+   * The auth pages and a handful of links still ask for --l-accent. Dropping
+   * the name left them resolving to nothing — an unstyled link and, worse, an
+   * input whose focus ring was invisible. Pointing the old names at the new
+   * violet is one line; renaming every caller is several files with nothing to
+   * show for it.
+   */
+  --l-accent: var(--l-violet);
+  --l-accent-hover: #6d28d9;
+  --l-accent-soft: var(--l-violet-tint);
+
   --l-border: rgba(15, 29, 69, 0.08);
   --l-border-strong: rgba(15, 29, 69, 0.14);
 

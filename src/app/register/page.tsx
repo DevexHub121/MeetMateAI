@@ -2,15 +2,22 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { AuthShell, Field } from "@/components/AuthShell";
+import { PasswordField } from "@/components/PasswordField";
 import { startRegistration } from "./actions";
 
 export default async function RegisterPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{
+    error?: string;
+    orgName?: string;
+    orgSlug?: string;
+    adminName?: string;
+    adminEmail?: string;
+  }>;
 }) {
   if (await getCurrentUser()) redirect("/meetings");
-  const { error } = await searchParams;
+  const { error, orgName, orgSlug, adminName, adminEmail } = await searchParams;
 
   return (
     <AuthShell
@@ -31,11 +38,11 @@ export default async function RegisterPage({
             {error}
           </p>
         )}
-        <Field label="Work email" name="adminEmail" type="email" required autoComplete="email" placeholder="you@company.com" />
-        <Field label="Your name" name="adminName" type="text" required autoComplete="name" placeholder="Jane Doe" />
-        <Field label="Company / workspace name" name="orgName" type="text" required placeholder="Acme Inc." />
-        <Field label="Workspace URL (optional)" name="orgSlug" type="text" placeholder="acme" />
-        <Field label="Password" name="password" type="password" required minLength={8} autoComplete="new-password" placeholder="At least 8 characters" />
+        <Field label="Work email" name="adminEmail" type="email" required autoComplete="email" placeholder="you@company.com" defaultValue={adminEmail ?? ""} />
+        <Field label="Your name" name="adminName" type="text" required autoComplete="name" placeholder="Jane Doe" defaultValue={adminName ?? ""} />
+        <Field label="Company / workspace name" name="orgName" type="text" required placeholder="Acme Inc." defaultValue={orgName ?? ""} />
+        <Field label="Workspace URL (optional)" name="orgSlug" type="text" placeholder="acme" defaultValue={orgSlug ?? ""} />
+        <PasswordField label="Password" name="password" required minLength={8} autoComplete="new-password" placeholder="At least 8 characters" />
         <button type="submit" className="l-btn-primary w-full px-4 py-2.5 text-sm">
           Create workspace
         </button>
