@@ -515,8 +515,52 @@ body::after {
   --d-blue: #1a8cff;
   --d-ai-grad: linear-gradient(100deg, #7c3aed, #4f46e5 55%, #0891b2);
 
+  /*
+   * The dark app's own tokens, re-pointed at paper.
+   *
+   * The screens that have not been redesigned — new meeting, meeting detail,
+   * team, voice, settings — are written against --color-*. Converting each by
+   * hand is hundreds of edits across files with no design yet, and every one is
+   * a chance to miss a line and leave light text on a light surface, which is
+   * exactly the bug this is fixing.
+   *
+   * Redefining the tokens here instead relights all of them at once and keeps
+   * a single place to change when each screen is properly designed. .card,
+   * .btn-primary and .btn-secondary are built from these same variables, so
+   * they follow without being touched.
+   */
+  --color-bg: #f4f4f2;
+  --color-surface: #ffffff;
+  --color-muted-surface: #fafaf8;
+  --color-elevated: rgba(15, 29, 69, 0.06);
+  --color-border: rgba(15, 29, 69, 0.1);
+  --color-border-strong: rgba(15, 29, 69, 0.18);
+  --color-heading: #0f1d45;
+  --color-text-primary: #3d4660;
+  --color-text-secondary: #46463f;
+  --color-text-muted: #6b7390;
+  --color-text-faint: #9aa0b4;
+  /* Primary buttons invert: on paper the ink surface is the dark one. */
+  --color-bg-2: #0f1d45;
+
   color: var(--d-text);
 }
+
+/* .card's shadow is tuned for a dark page; on paper it reads as grime. */
+.app-light .card {
+  box-shadow: none;
+  background: var(--color-surface);
+}
+.app-light .card-hover:hover { box-shadow: 0 10px 30px -18px rgba(15, 29, 69, 0.5); }
+
+/* The inverted primary button: navy ground, white label. */
+.app-light .btn-primary {
+  color: #ffffff;
+}
+.app-light .btn-primary:hover { background: #16275a; }
+
+/* The dark brand tile behind small marks would be a black square on paper. */
+.app-light .brand-gradient { background-image: none; background: rgba(15, 29, 69, 0.06); }
 
 /*
  * Repaint the page itself, not just the wrapper.
