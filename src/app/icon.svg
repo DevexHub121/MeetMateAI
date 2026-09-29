@@ -1,26 +1,36 @@
 <svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <!--
+    MeetMate's mark on a brand tile.
+
+    Simplified from the full logo on purpose. A favicon is read at 16px in a
+    crowded tab strip, where the microphone, the spark lines and the faces are
+    all smaller than a pixel — drawn in, they turn to grey mush. What survives
+    at that size is the silhouette: two heads and the M their arms make. So
+    that is all this draws, at a weight heavy enough to hold together.
+
+    On a filled tile rather than transparent, because a tab strip may be light
+    or dark and a bare navy mark disappears into one of them.
+  -->
   <defs>
-    <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#242424"/>
-      <stop offset="1" stop-color="#171717"/>
+    <linearGradient id="mm" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#22A6F2"/>
+      <stop offset="1" stop-color="#A855F7"/>
     </linearGradient>
   </defs>
-  <rect width="64" height="64" rx="14" fill="url(#tile)"/>
-  <rect x="0.75" y="0.75" width="62.5" height="62.5" rx="13.25" fill="none" stroke="#ffffff" stroke-opacity="0.09"/>
 
-  <!-- linked "echo" rings -->
-  <g fill="none" stroke="#f4f4f2" stroke-width="3.2">
-    <circle cx="22.5" cy="32" r="12.5"/>
-    <circle cx="41.5" cy="32" r="12.5"/>
+  <rect width="64" height="64" rx="14" fill="url(#mm)"/>
+
+  <g fill="#ffffff">
+    <circle cx="21" cy="21" r="8"/>
+    <circle cx="43" cy="21" r="8"/>
   </g>
 
-  <!-- E crossbar in the left ring -->
-  <line x1="14.5" y1="32" x2="29" y2="32" stroke="#f4f4f2" stroke-width="3.4" stroke-linecap="round"/>
-
-  <!-- voice / soundwave in the right ring -->
-  <g stroke="#f4f4f2" stroke-width="3" stroke-linecap="round">
-    <line x1="37.3" y1="28.5" x2="37.3" y2="35.5"/>
-    <line x1="41.5" y1="24"   x2="41.5" y2="40"/>
-    <line x1="45.7" y1="27"   x2="45.7" y2="37"/>
+  <!-- Bodies: two uprights and two arms meeting in the middle. Together they
+       read as an M without ever drawing the letter. -->
+  <g stroke="#ffffff" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <path d="M14 50V35"/>
+    <path d="M50 50V35"/>
+    <path d="M16 33c5-2 10 1 16 8"/>
+    <path d="M48 33c-5-2-10 1-16 8"/>
   </g>
 </svg>
