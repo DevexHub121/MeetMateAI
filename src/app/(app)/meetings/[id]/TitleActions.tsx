@@ -73,7 +73,7 @@ export function TitleActions({
                 setDraft(title);
               }
             }}
-            className="min-w-0 flex-1 rounded-lg border border-[var(--color-border)] bg-[var(--color-muted-surface)] px-3 py-1.5 text-xl font-semibold tracking-tight text-[var(--color-heading)] outline-none transition-colors focus:border-[var(--color-border-strong)] focus:ring-1 focus:ring-white/15"
+            className="min-w-0 flex-1 rounded-lg border border-[var(--color-border)] bg-[var(--color-muted-surface)] px-3 py-1.5 text-xl font-semibold tracking-tight text-[var(--color-heading)] outline-none transition-colors focus:border-[var(--color-border-strong)] focus:ring-1 focus:ring-[var(--color-border-strong)]"
           />
           <button
             type="button"

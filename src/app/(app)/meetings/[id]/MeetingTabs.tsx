@@ -61,7 +61,7 @@ export function MeetingTabs({ tabs }: { tabs: MeetingTab[] }) {
                 <span
                   className={`rounded-full px-1.5 py-0.5 text-[11px] font-semibold ${
                     selected
-                      ? "bg-white/10 text-[var(--color-heading)]"
+                      ? "bg-[var(--color-elevated)] text-[var(--color-heading)]"
                       : "bg-[var(--color-muted-surface)] text-[var(--color-text-muted)]"
                   }`}
                 >

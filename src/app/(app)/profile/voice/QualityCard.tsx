@@ -55,7 +55,7 @@ export function QualityCard({ report }: { report: QualityReport }) {
         </span>
       </div>
 
-      <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-black/25">
+      <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-[var(--color-elevated)]">
         <div
           className={`h-full rounded-full ${tone.bar}`}
           style={{ width: `${report.score}%` }}

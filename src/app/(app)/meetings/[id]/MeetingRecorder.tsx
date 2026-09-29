@@ -1430,7 +1430,7 @@ function DetachedPill({
         <button
           type="button"
           onClick={onStop}
-          className="rounded-full bg-[var(--color-elevated)] px-3 py-1 text-xs font-medium text-[var(--color-heading)] ring-1 ring-inset ring-white/10 transition-colors hover:bg-white/10"
+          className="rounded-full bg-[var(--color-elevated)] px-3 py-1 text-xs font-medium text-[var(--color-heading)] ring-1 ring-inset ring-[var(--color-border)] transition-colors hover:bg-[var(--color-elevated)]"
         >
           Stop
         </button>
@@ -1479,7 +1479,7 @@ function CaptionToggle({
         <span
           className={`absolute top-0.5 left-0.5 h-3 w-3 rounded-full transition duration-150 ease-out ${
             checked
-              ? "translate-x-3 bg-[#181818]"
+              ? "translate-x-3 bg-[var(--color-bg)]"
               : "bg-[var(--color-text-muted)]"
           }`}
         />
@@ -1600,7 +1600,7 @@ function RecordAction({
           onClick={onRetrySave}
           className="inline-flex items-center gap-2 rounded-full bg-[var(--color-bg-2)] px-5 py-2.5 text-sm font-semibold text-[#181818] shadow-sm transition-colors hover:bg-white"
         >
-          <span className="h-2.5 w-2.5 rounded-full bg-[#181818]" />
+          <span className="h-2.5 w-2.5 rounded-full bg-current" />
           Retry save
         </button>
       </div>
@@ -1649,7 +1649,7 @@ function RecordAction({
       onClick={onStart}
       className="inline-flex items-center gap-2 rounded-full bg-[var(--color-bg-2)] px-5 py-2.5 text-sm font-semibold text-[#181818] shadow-sm transition-colors hover:bg-white"
     >
-      <span className="h-2.5 w-2.5 rounded-full bg-[#181818]" />
+      <span className="h-2.5 w-2.5 rounded-full bg-current" />
       {/* Not "Start meeting": starting a meeting is what the note-taker card
           above does. This one is the device in front of you, and saying so is
           the difference between choosing it and stumbling into it. */}

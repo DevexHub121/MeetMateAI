@@ -163,7 +163,7 @@ export function TranscriptView({
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search the transcript…"
-          className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-elevated)] py-2 pl-9 pr-3 text-sm text-[var(--color-heading)] outline-none transition-colors placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-border-strong)] focus:ring-1 focus:ring-white/15"
+          className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-elevated)] py-2 pl-9 pr-3 text-sm text-[var(--color-heading)] outline-none transition-colors placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-border-strong)] focus:ring-1 focus:ring-[var(--color-border-strong)]"
         />
       </div>
 

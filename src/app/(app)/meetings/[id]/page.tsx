@@ -282,8 +282,8 @@ export default async function MeetingPage({
           <span
             className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${
               meeting.type === "client"
-                ? "bg-white/10 text-[var(--color-heading)] ring-white/10"
-                : "bg-[var(--color-muted-surface)] text-[var(--color-text-secondary)] ring-white/10"
+                ? "bg-[var(--color-elevated)] text-[var(--color-heading)] ring-[var(--color-border)]"
+                : "bg-[var(--color-muted-surface)] text-[var(--color-text-secondary)] ring-[var(--color-border)]"
             }`}
           >
             {meeting.type === "client" ? "Client" : "Internal"}

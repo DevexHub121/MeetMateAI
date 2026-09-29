@@ -192,7 +192,7 @@ export function NewMeetingForm({
           id="title"
           name="title"
           placeholder="Weekly sync"
-          className="block w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-muted-surface)] px-3 py-2 text-sm text-[var(--color-heading)] placeholder:text-[var(--color-text-muted)] shadow-sm outline-none transition-colors focus:border-[var(--color-border-strong)] focus:ring-1 focus:ring-white/15"
+          className="block w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-muted-surface)] px-3 py-2 text-sm text-[var(--color-heading)] placeholder:text-[var(--color-text-muted)] shadow-sm outline-none transition-colors focus:border-[var(--color-border-strong)] focus:ring-1 focus:ring-[var(--color-border-strong)]"
         />
         <p className="mt-1 text-xs text-[var(--color-text-muted)]">
           Leave blank to auto-name it from the date.
@@ -213,7 +213,7 @@ export function NewMeetingForm({
             id="clientName"
             name="clientName"
             placeholder="Acme Corp"
-            className="block w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-muted-surface)] px-3 py-2 text-sm text-[var(--color-heading)] placeholder:text-[var(--color-text-muted)] shadow-sm outline-none transition-colors focus:border-[var(--color-border-strong)] focus:ring-1 focus:ring-white/15"
+            className="block w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-muted-surface)] px-3 py-2 text-sm text-[var(--color-heading)] placeholder:text-[var(--color-text-muted)] shadow-sm outline-none transition-colors focus:border-[var(--color-border-strong)] focus:ring-1 focus:ring-[var(--color-border-strong)]"
           />
           <p className="mt-1 text-xs text-[var(--color-text-muted)]">
             Client meetings skip the participant list. Minutes stay summary-only
@@ -242,7 +242,7 @@ export function NewMeetingForm({
               value={empQuery}
               onChange={(e) => setEmpQuery(e.target.value)}
               placeholder="Search by name, email, or position…"
-              className="block w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-muted-surface)] px-3 py-2 text-sm text-[var(--color-heading)] placeholder:text-[var(--color-text-muted)] shadow-sm outline-none transition-colors focus:border-[var(--color-border-strong)] focus:ring-1 focus:ring-white/15"
+              className="block w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-muted-surface)] px-3 py-2 text-sm text-[var(--color-heading)] placeholder:text-[var(--color-text-muted)] shadow-sm outline-none transition-colors focus:border-[var(--color-border-strong)] focus:ring-1 focus:ring-[var(--color-border-strong)]"
             />
             {empMatches.length > 0 && (
               <ul className="absolute z-10 mt-1 max-h-64 w-full overflow-auto rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] py-1 shadow-lg shadow-black/30">
@@ -404,7 +404,7 @@ export function NewMeetingForm({
               }
             }}
             placeholder="Name"
-            className="min-w-0 flex-1 rounded-lg border border-[var(--color-border)] bg-[var(--color-muted-surface)] px-3 py-2 text-sm text-[var(--color-heading)] placeholder:text-[var(--color-text-muted)] shadow-sm outline-none transition-colors focus:border-[var(--color-border-strong)] focus:ring-1 focus:ring-white/15"
+            className="min-w-0 flex-1 rounded-lg border border-[var(--color-border)] bg-[var(--color-muted-surface)] px-3 py-2 text-sm text-[var(--color-heading)] placeholder:text-[var(--color-text-muted)] shadow-sm outline-none transition-colors focus:border-[var(--color-border-strong)] focus:ring-1 focus:ring-[var(--color-border-strong)]"
           />
           <input
             type="email"
@@ -417,7 +417,7 @@ export function NewMeetingForm({
               }
             }}
             placeholder="email@company.com"
-            className="min-w-0 flex-1 rounded-lg border border-[var(--color-border)] bg-[var(--color-muted-surface)] px-3 py-2 text-sm text-[var(--color-heading)] placeholder:text-[var(--color-text-muted)] shadow-sm outline-none transition-colors focus:border-[var(--color-border-strong)] focus:ring-1 focus:ring-white/15"
+            className="min-w-0 flex-1 rounded-lg border border-[var(--color-border)] bg-[var(--color-muted-surface)] px-3 py-2 text-sm text-[var(--color-heading)] placeholder:text-[var(--color-text-muted)] shadow-sm outline-none transition-colors focus:border-[var(--color-border-strong)] focus:ring-1 focus:ring-[var(--color-border-strong)]"
           />
           <button
             type="button"
@@ -458,7 +458,7 @@ export function NewMeetingForm({
             type="datetime-local"
             value={date}
             onChange={(e) => setDate(e.target.value)}
-            className="block w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-muted-surface)] px-3 py-2 text-sm text-[var(--color-heading)] placeholder:text-[var(--color-text-muted)] shadow-sm outline-none transition-colors focus:border-[var(--color-border-strong)] focus:ring-1 focus:ring-white/15"
+            className="block w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-muted-surface)] px-3 py-2 text-sm text-[var(--color-heading)] placeholder:text-[var(--color-text-muted)] shadow-sm outline-none transition-colors focus:border-[var(--color-border-strong)] focus:ring-1 focus:ring-[var(--color-border-strong)]"
           />
           <p className="mt-1 text-xs text-[var(--color-text-muted)]">
             Participants get an email invite with a calendar (.ics) attachment
@@ -474,7 +474,7 @@ export function NewMeetingForm({
           formAction={startMeetingNow}
           className="btn-primary"
         >
-          <span className="h-2 w-2 rounded-full bg-[#181818]" />
+          <span className="h-2 w-2 rounded-full bg-current" />
           Start now
         </button>
 
@@ -532,7 +532,7 @@ export function NewMeetingForm({
               if (e.key === "Enter") e.preventDefault();
             }}
             placeholder="https://meet.google.com/… or https://zoom.us/j/…"
-            className="mb-3 block w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-muted-surface)] px-3 py-2 text-sm text-[var(--color-heading)] placeholder:text-[var(--color-text-muted)] shadow-sm outline-none transition-colors focus:border-[var(--color-border-strong)] focus:ring-1 focus:ring-white/15"
+            className="mb-3 block w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-muted-surface)] px-3 py-2 text-sm text-[var(--color-heading)] placeholder:text-[var(--color-text-muted)] shadow-sm outline-none transition-colors focus:border-[var(--color-border-strong)] focus:ring-1 focus:ring-[var(--color-border-strong)]"
           />
           {meetLinkWarning && (
             <p className="mb-3 text-xs text-amber-400">{meetLinkWarning}</p>
@@ -633,7 +633,7 @@ export function NewMeetingForm({
               value={importUrl}
               onChange={(e) => setImportUrl(e.target.value)}
               placeholder="https://…/recording.mp3"
-              className="min-w-0 flex-1 rounded-lg border border-[var(--color-border)] bg-[var(--color-muted-surface)] px-3 py-2 text-sm text-[var(--color-heading)] placeholder:text-[var(--color-text-muted)] shadow-sm outline-none transition-colors focus:border-[var(--color-border-strong)] focus:ring-1 focus:ring-white/15"
+              className="min-w-0 flex-1 rounded-lg border border-[var(--color-border)] bg-[var(--color-muted-surface)] px-3 py-2 text-sm text-[var(--color-heading)] placeholder:text-[var(--color-text-muted)] shadow-sm outline-none transition-colors focus:border-[var(--color-border-strong)] focus:ring-1 focus:ring-[var(--color-border-strong)]"
             />
             <button
               type="submit"

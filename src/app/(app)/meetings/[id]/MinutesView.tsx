@@ -62,7 +62,7 @@ export function MinutesView({
             {minutes.attendees.map((a, i) => (
               <span
                 key={i}
-                className="inline-flex items-center rounded-full bg-[var(--color-elevated)] px-3 py-1 text-sm font-medium text-[var(--color-heading)] ring-1 ring-inset ring-white/10"
+                className="inline-flex items-center rounded-full bg-[var(--color-elevated)] px-3 py-1 text-sm font-medium text-[var(--color-heading)] ring-1 ring-inset ring-[var(--color-border)]"
               >
                 {a}
               </span>

@@ -95,7 +95,7 @@ export function StartMeeting({
             onChange={(e) => setLink(e.target.value)}
             onBlur={() => setLink((v) => normalizeMeetingLink(v))}
             placeholder="https://meet.google.com/… or https://zoom.us/j/…"
-            className="min-w-0 flex-1 rounded-lg border border-[var(--color-border)] bg-[var(--color-muted-surface)] px-3 py-2 text-sm text-[var(--color-heading)] placeholder:text-[var(--color-text-muted)] outline-none transition-colors focus:border-[var(--color-border-strong)] focus:ring-1 focus:ring-white/15"
+            className="min-w-0 flex-1 rounded-lg border border-[var(--color-border)] bg-[var(--color-muted-surface)] px-3 py-2 text-sm text-[var(--color-heading)] placeholder:text-[var(--color-text-muted)] outline-none transition-colors focus:border-[var(--color-border-strong)] focus:ring-1 focus:ring-[var(--color-border-strong)]"
           />
           <StartButton
             onClick={submit}

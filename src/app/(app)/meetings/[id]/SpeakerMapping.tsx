@@ -77,7 +77,7 @@ export function SpeakerMapping({
               <select
                 name="speakerAssignment"
                 defaultValue={personValue(current, people)}
-                className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-elevated)] px-3 py-2 text-sm text-[var(--color-heading)] outline-none transition-colors focus:border-[var(--color-border-strong)] focus:ring-1 focus:ring-white/15 sm:w-64"
+                className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-elevated)] px-3 py-2 text-sm text-[var(--color-heading)] outline-none transition-colors focus:border-[var(--color-border-strong)] focus:ring-1 focus:ring-[var(--color-border-strong)] sm:w-64"
               >
                 <option value="">— Leave as {s.label} —</option>
                 {people.map((p, i) => (

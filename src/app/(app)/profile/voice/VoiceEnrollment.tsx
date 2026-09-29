@@ -509,7 +509,7 @@ export function VoiceEnrollment({
                   {TALKING_POINTS.map((t) => (
                     <span
                       key={t}
-                      className="rounded-full bg-[var(--color-elevated)] px-3 py-1 text-sm text-[var(--color-text-secondary)] ring-1 ring-inset ring-white/10"
+                      className="rounded-full bg-[var(--color-elevated)] px-3 py-1 text-sm text-[var(--color-text-secondary)] ring-1 ring-inset ring-[var(--color-border)]"
                     >
                       {t}
                     </span>
