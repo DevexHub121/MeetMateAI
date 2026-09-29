@@ -125,8 +125,28 @@ body::after {
   font-family: var(--font-jetbrains), "JetBrains Mono", ui-monospace, monospace;
 }
 
+/*
+ * Selection, in the brand's own violet.
+ *
+ * The previous rule was written for the charcoal app — near-white text on an
+ * 18% white wash. On paper that is invisible text under an invisible
+ * highlight, so selecting anything appeared to erase it.
+ *
+ * Set on :root and overridden per surface below rather than picked from a
+ * variable: ::selection does not inherit custom properties reliably across
+ * engines, and a highlight that silently resolves to nothing is the bug being
+ * fixed.
+ */
 ::selection {
-  background: rgba(244, 244, 242, 0.18);
+  background: rgba(124, 58, 237, 0.22);
+  color: #0f1d45;
+}
+
+/* The dark app keeps a light selection — violet ink on charcoal would be
+   unreadable the other way round. */
+.dark-surface ::selection,
+.notetaker-tile ::selection {
+  background: rgba(244, 244, 242, 0.22);
   color: #ffffff;
 }
 

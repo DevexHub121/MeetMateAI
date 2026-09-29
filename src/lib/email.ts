@@ -12,10 +12,25 @@ import type { Invitee, Minutes } from "@/db/schema";
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const EMAIL_FROM = process.env.EMAIL_FROM ?? "MeetMate <onboarding@resend.dev>";
-const APP_URL = (process.env.APP_URL ?? "http://localhost:3000").replace(
-  /\/$/,
-  "",
-);
+/*
+ * Every link we email is built from this.
+ *
+ * Unset, it falls back to localhost — correct in development and silently
+ * wrong in production, where it means minutes land in customers' inboxes
+ * carrying links to their own machine. That failure is invisible from inside
+ * the app: the email sends, the job succeeds, and only the recipient finds
+ * out. So say so in the logs rather than discovering it from a support ticket.
+ */
+const APP_URL = (() => {
+  const set = process.env.APP_URL?.trim();
+  if (!set && process.env.NODE_ENV === "production") {
+    console.warn(
+      "[email] APP_URL is not set — every link in an outgoing email will point " +
+        "at localhost and be dead for the person who receives it.",
+    );
+  }
+  return (set || "http://localhost:3000").replace(/\/+$/, "");
+})();
 
 const SMTP_HOST = process.env.SMTP_HOST;
 const SMTP_USER = process.env.SMTP_USER;

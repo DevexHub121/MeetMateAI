@@ -142,13 +142,6 @@ export function NotetakerSettings({
           </p>
         )}
 
-        <p className="mt-2 text-xs text-[var(--color-text-muted)]">
-          The tile is editable in{" "}
-          <code className="text-[var(--color-text-secondary)]">
-            scripts/build-notetaker-tile.mjs
-          </code>
-          .
-        </p>
       </div>
     </div>
   );
