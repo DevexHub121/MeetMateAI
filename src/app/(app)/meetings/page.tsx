@@ -2,7 +2,8 @@ import Link from "next/link";
 import { listMeetingFilterOptions, listMeetingPage } from "@/lib/meetings";
 import { requireUser } from "@/lib/auth";
 import { StatusBadge } from "@/components/StatusBadge";
-import { formatIST } from "@/lib/datetime";
+import Image from "next/image";
+import { istDayKey, istDayLabel, formatISTTime, isUpcoming } from "@/lib/datetime";
 import type { MeetingType } from "@/db/schema";
 import { MeetingFilters } from "./MeetingFilters";
 
@@ -80,207 +81,267 @@ export default async function MeetingsPage({
   };
   const pageHref = (p: number) => withParams({ page: p > 1 ? String(p) : "" });
 
+
+  /*
+   * "Right now" — the meetings that are mid-flight or about to start.
+   *
+   * Drawn from the rows already fetched rather than a second query: on page one
+   * with no filters this page is the newest ten, which is where anything live
+   * will be. Shown only in that case, because on page four of a filtered search
+   * a "right now" strip is answering a question nobody asked.
+   */
+  const live =
+    currentPage === 1 && !filtered && active === "all"
+      ? rows.filter(
+          (m) =>
+            m.status === "analyzing" ||
+            m.status === "transcribing" ||
+            (m.status === "scheduled" && isUpcoming(m.meetingDate ?? m.createdAt)),
+        )
+      : [];
+
+  // Rows in the order the query returned them, cut into IST days. Insertion
+  // order is preserved by Map, so the grouping never reorders the list.
+  const groups = new Map<string, { label: string; items: typeof rows }>();
+  for (const m of rows) {
+    const when = m.meetingDate ?? m.createdAt;
+    const key = istDayKey(when);
+    if (!groups.has(key)) groups.set(key, { label: istDayLabel(when), items: [] });
+    groups.get(key)!.items.push(m);
+  }
+
+  const typeToggle = (
+    <div className="mb-3 inline-flex rounded-full p-1" style={{ background: "rgba(15,29,69,.06)" }}>
+      {FILTERS.map((f) => {
+        const isActive = active === f.key;
+        return (
+          <Link
+            key={f.key}
+            href={withParams({ type: f.key === "all" ? "" : f.key, page: "" })}
+            aria-current={isActive ? "page" : undefined}
+            className="rounded-full px-3.5 py-1.5 text-[13px] font-medium transition-colors"
+            style={isActive ? { background: "var(--d-ink)", color: "#fff" } : { color: "var(--d-text)" }}
+          >
+            {f.label}
+            <span className="ml-1.5 text-[11px] opacity-70">{counts[f.key]}</span>
+          </Link>
+        );
+      })}
+    </div>
+  );
+
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="font-display text-2xl font-semibold tracking-tight text-[var(--color-heading)]">
+      <div className="mb-7">
+        <h1 className="font-[family-name:var(--font-display)] text-[44px] font-bold leading-none tracking-[-0.03em] text-[var(--d-ink)]">
           Meetings
         </h1>
-        <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
+        <p className="mt-2.5 text-[14px] text-[var(--d-muted)]">
           {shownCount} meeting{shownCount === 1 ? "" : "s"}
           {active !== "all" ? ` · ${active}` : ""}
           {filtered ? " · filtered" : ""}
         </p>
       </div>
 
+      {live.length > 0 && (
+        <section className="mb-5">
+          <h2 className="mb-2.5 text-[12px] font-semibold uppercase tracking-[0.1em] text-[var(--d-muted)]">
+            Right now
+          </h2>
+          <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))" }}>
+            {live.map((m) => {
+              const working = m.status === "analyzing";
+              return (
+                <Link
+                  key={m.id}
+                  href={`/meetings/${m.id}`}
+                  className="block rounded-2xl p-4 transition-shadow hover:shadow-sm"
+                  style={
+                    working
+                      ? { background: "linear-gradient(115deg,rgba(167,139,250,.12),rgba(34,211,238,.09))", border: "1px solid rgba(129,140,248,.4)" }
+                      : { background: "var(--d-soft)", border: "1px solid var(--d-border)" }
+                  }
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <StatusBadge status={m.status} />
+                    <span className="shrink-0 font-mono text-[12px] text-[var(--d-muted)]">
+                      {formatISTTime(m.meetingDate ?? m.createdAt)}
+                    </span>
+                  </div>
+                  <p className="mt-2.5 truncate font-[family-name:var(--font-display)] text-[19px] font-semibold text-[var(--d-ink)]">
+                    {m.title}
+                  </p>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
       <MeetingFilters
         values={{ type: active, ...filters }}
         options={options}
         showCreator={showHost}
+        typeToggle={typeToggle}
       />
-
-      {/* Filter toggle: differentiate internal vs client meetings. */}
-      <div className="mb-5 inline-flex rounded-lg border border-[var(--color-border)] p-0.5">
-        {FILTERS.map((f) => {
-          const count = counts[f.key];
-          const isActive = active === f.key;
-          return (
-            <Link
-              key={f.key}
-              href={withParams({ type: f.key === "all" ? "" : f.key, page: "" })}
-              className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-                isActive
-                  ? "bg-[var(--color-elevated)] text-[var(--color-heading)]"
-                  : "text-[var(--color-text-secondary)] hover:text-[var(--color-heading)]"
-              }`}
-            >
-              {f.label}
-              <span
-                className={`ml-1.5 text-xs ${
-                  isActive
-                    ? "text-[var(--color-text-secondary)]"
-                    : "text-[var(--color-text-muted)]"
-                }`}
-              >
-                {count}
-              </span>
-            </Link>
-          );
-        })}
-      </div>
 
       {rows.length === 0 && filtered ? (
         /* Nothing matched. Deliberately not the "no meetings yet" state — the
            meetings exist, the filters just excluded them, and offering to record
            a first one would be telling the reader something untrue. */
-        <div className="card flex flex-col items-center gap-3 border-dashed p-14 text-center">
-          <p className="font-medium text-[var(--color-heading)]">
-            No meetings match these filters
-          </p>
-          <p className="max-w-xs text-sm text-[var(--color-text-muted)]">
+        <div
+          className="flex flex-col items-center gap-3 rounded-2xl p-14 text-center"
+          style={{ background: "var(--d-soft)", border: "1px dashed var(--d-border-strong)" }}
+        >
+          <p className="font-semibold text-[var(--d-ink)]">No meetings match these filters</p>
+          <p className="max-w-xs text-sm text-[var(--d-muted)]">
             Try a different date range, or clear a filter to widen the search.
           </p>
           <Link
             href={active === "all" ? "/meetings" : `/meetings?type=${active}`}
-            className="btn-secondary mt-1 px-4 py-2 text-sm"
+            className="mt-1 rounded-full px-4 py-2 text-sm font-medium text-[var(--d-ink)]"
+            style={{ border: "1px solid var(--d-border-strong)" }}
           >
             Clear filters
           </Link>
         </div>
       ) : rows.length === 0 ? (
-        <div className="card animate-fade-in-up flex flex-col items-center gap-3 border-dashed p-14 text-center">
-          <span className="relative mb-1">
-            <span
-              aria-hidden
-              className="pointer-events-none absolute -inset-2 rounded-3xl opacity-50 blur-lg"
-              style={{ backgroundImage: "var(--gradient-ai)" }}
-            />
-            <span className="brand-gradient relative flex h-12 w-12 items-center justify-center rounded-2xl border border-[var(--color-border)] text-[var(--color-heading)] shadow-sm">
-              <SparkleIcon />
-            </span>
-          </span>
-          <p className="font-medium text-[var(--color-heading)]">
-            No meetings yet
-          </p>
-          <p className="max-w-xs text-sm text-[var(--color-text-muted)]">
+        <div
+          className="flex flex-col items-center gap-3 rounded-2xl p-14 text-center"
+          style={{ background: "var(--d-soft)", border: "1px dashed var(--d-border-strong)" }}
+        >
+          <Image src="/brand/meetmate-mark.png" alt="" width={104} height={80} className="mb-1 h-16 w-auto" />
+          <p className="font-semibold text-[var(--d-ink)]">No meetings yet</p>
+          <p className="max-w-xs text-sm text-[var(--d-muted)]">
             Record or import a conversation — MeetMate transcribes it and writes
             clean, shareable minutes automatically.
           </p>
-          <Link href="/meetings/new" className="btn-ai mt-2 px-4 py-2">
-            <SparkleIcon />
+          <Link
+            href="/meetings/new"
+            className="mt-2 rounded-full px-4 py-2.5 text-sm font-semibold text-white"
+            style={{ background: "var(--d-ai-grad)" }}
+          >
             Start your first meeting
           </Link>
         </div>
       ) : (
-        <div className="card overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="border-b border-[var(--color-border)] bg-[var(--color-muted-surface)]/50 text-left text-xs uppercase tracking-wide text-[var(--color-text-muted)]">
-              <tr>
-                <th className="px-5 py-3 font-medium">Meeting</th>
-                <th className="px-5 py-3 font-medium">Participants</th>
-                {showHost && (
-                  <th className="px-5 py-3 font-medium">Created by</th>
-                )}
-                <th className="px-5 py-3 font-medium">Status</th>
-                <th className="px-5 py-3 text-right font-medium">Date</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[var(--color-border)]">
-              {rows.map((m) => (
-                <tr
+        <div className="overflow-hidden rounded-2xl" style={{ background: "var(--d-surface)", border: "1px solid var(--d-border)" }}>
+          {/* Column header. Mono and uppercase so it reads as a label strip
+              rather than a first row of data. */}
+          <div
+            className="hidden items-center gap-4 px-4 py-2.5 font-mono text-[11px] uppercase tracking-[0.08em] text-[var(--d-muted)] md:grid"
+            style={{ gridTemplateColumns: showHost ? "2.6fr 1.1fr 1fr 1.1fr 76px" : "2.6fr 1.1fr 1.1fr 76px", borderBottom: "1px solid var(--d-border)" }}
+          >
+            <span>Meeting</span>
+            <span>Participants</span>
+            {showHost && <span>Created by</span>}
+            <span>Status</span>
+            <span className="text-right">Time</span>
+          </div>
+
+          {[...groups.values()].map((g) => (
+            <div key={g.label}>
+              <div
+                className="flex items-baseline gap-2 px-4 py-2.5"
+                style={{ background: "var(--d-soft)", borderBottom: "1px solid var(--d-border)" }}
+              >
+                <span className="text-[15px] font-semibold text-[var(--d-ink)]">{g.label}</span>
+                <span className="text-[12px] text-[var(--d-muted)]">{g.items.length}</span>
+              </div>
+
+              {g.items.map((m) => (
+                <Link
                   key={m.id}
-                  className="group transition-colors hover:bg-[var(--color-muted-surface)]"
+                  href={`/meetings/${m.id}`}
+                  /* Link, not <a>: a bare anchor threw away the whole document
+                     and rebuilt it — new HTML, new JS, a blank screen for the
+                     duration. Link keeps the shell mounted and prefetches. */
+                  className="group grid items-center gap-4 px-4 py-3 transition-colors hover:bg-[var(--d-soft)]"
+                  style={{ gridTemplateColumns: showHost ? "2.6fr 1.1fr 1fr 1.1fr 76px" : "2.6fr 1.1fr 1.1fr 76px", borderBottom: "1px solid var(--d-border)" }}
                 >
-                  <td className="px-5 py-3">
-                    {/* Link, not <a>: a bare anchor threw away the whole
-                        document and rebuilt it — new HTML, new JS, a blank
-                        screen for the duration. Link keeps the shell mounted,
-                        prefetches on hover, and lets loading.tsx paint
-                        instantly. */}
-                    <Link
-                      href={`/meetings/${m.id}`}
-                      className="flex items-center gap-3"
+                  <span className="flex min-w-0 items-center gap-3">
+                    <span
+                      className="grid h-9 w-9 shrink-0 place-items-center rounded-[10px] text-[var(--d-muted)] transition-colors group-hover:text-[var(--d-ink)]"
+                      style={{ background: "rgba(15,29,69,.05)" }}
                     >
-                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--color-elevated)] text-[var(--color-text-muted)] transition-colors group-hover:text-[var(--color-heading)]">
-                        <MicIcon />
-                      </span>
-                      <span className="font-medium text-[var(--color-heading)]">
-                        {m.title}
-                      </span>
-                      <span
-                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ring-inset ring-white/10 ${
-                          m.type === "client"
-                            ? "bg-white/10 text-[var(--color-heading)]"
-                            : "bg-[var(--color-muted-surface)] text-[var(--color-text-secondary)]"
-                        }`}
-                      >
-                        {m.type === "client" ? "Client" : "Internal"}
-                      </span>
-                    </Link>
-                  </td>
-                  <td className="px-5 py-3 text-[var(--color-text-secondary)]">
+                      <MicIcon />
+                    </span>
+                    <span className="min-w-0 truncate text-[15px] font-semibold text-[var(--d-ink)]">
+                      {m.title}
+                    </span>
+                    <span
+                      className="hidden shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium sm:inline"
+                      style={
+                        m.type === "client"
+                          ? { background: "var(--d-ink)", color: "#fff" }
+                          : { background: "rgba(15,29,69,.06)", color: "var(--d-text)" }
+                      }
+                    >
+                      {m.type === "client" ? "Client" : "Internal"}
+                    </span>
+                  </span>
+
+                  <span className="hidden md:block">
                     {m.invitees && m.invitees.length ? (
-                      <span title={m.invitees.map((i) => i.name).join(", ")}>
-                        {m.invitees.length} participant
-                        {m.invitees.length === 1 ? "" : "s"}
+                      <span className="flex items-center" title={m.invitees.map((i) => i.name).join(", ")}>
+                        {m.invitees.slice(0, 3).map((i, k) => (
+                          <span
+                            key={`${i.email ?? i.name}-${k}`}
+                            className="grid h-7 w-7 place-items-center rounded-full text-[11px] font-semibold text-[var(--d-ink)]"
+                            style={{ background: "rgba(15,29,69,.08)", boxShadow: "0 0 0 2px var(--d-surface)", marginLeft: k ? -8 : 0 }}
+                          >
+                            {(i.name || i.email || "?").slice(0, 1).toUpperCase()}
+                          </span>
+                        ))}
+                        {m.invitees.length > 3 && (
+                          <span className="ml-1.5 text-[12px] text-[var(--d-muted)]">
+                            +{m.invitees.length - 3}
+                          </span>
+                        )}
                       </span>
                     ) : (
-                      "—"
+                      <span className="text-[13px] text-[var(--d-muted)]">—</span>
                     )}
-                  </td>
+                  </span>
+
                   {showHost && (
-                    <td className="px-5 py-3 text-[var(--color-text-secondary)]">
-                      {m.hostName ?? (
-                        <span className="text-[var(--color-text-muted)]">—</span>
-                      )}
-                    </td>
+                    <span className="hidden truncate text-[13px] text-[var(--d-text)] md:block">
+                      {m.hostName ?? <span className="text-[var(--d-muted)]">—</span>}
+                    </span>
                   )}
-                  <td className="px-5 py-3">
-                    <StatusBadge status={m.status} />
-                  </td>
-                  <td className="px-5 py-3 text-right text-[var(--color-text-muted)]">
-                    {formatIST(m.meetingDate ?? m.createdAt)}
-                  </td>
-                </tr>
+
+                  <span className="hidden md:block"><StatusBadge status={m.status} /></span>
+
+                  <span className="hidden text-right font-mono text-[12px] text-[var(--d-muted)] md:block">
+                    {formatISTTime(m.meetingDate ?? m.createdAt)}
+                  </span>
+                </Link>
               ))}
-            </tbody>
-          </table>
+            </div>
+          ))}
         </div>
       )}
 
       {/* Pagination — only when the filtered list spans more than one page. */}
       {totalPages > 1 && (
         <div className="mt-5 flex items-center justify-between">
-          <p className="text-xs text-[var(--color-text-muted)]">
+          <p className="text-[12px] text-[var(--d-muted)]">
             Page {currentPage} of {totalPages}
           </p>
           <div className="flex items-center gap-1">
-            <PageLink
-              href={pageHref(currentPage - 1)}
-              disabled={currentPage === 1}
-            >
-              ← Prev
-            </PageLink>
+            <PageLink href={pageHref(currentPage - 1)} disabled={currentPage === 1}>← Prev</PageLink>
             {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
               <Link
                 key={p}
                 href={pageHref(p)}
                 aria-current={p === currentPage ? "page" : undefined}
-                className={`min-w-8 rounded-md px-2.5 py-1.5 text-center text-sm font-medium transition-colors ${
-                  p === currentPage
-                    ? "bg-[var(--color-elevated)] text-[var(--color-heading)]"
-                    : "border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-muted-surface)]"
-                }`}
+                className="min-w-8 rounded-full px-2.5 py-1.5 text-center text-sm font-medium transition-colors"
+                style={p === currentPage ? { background: "var(--d-ink)", color: "#fff" } : { color: "var(--d-text)" }}
               >
                 {p}
               </Link>
             ))}
-            <PageLink
-              href={pageHref(currentPage + 1)}
-              disabled={currentPage === totalPages}
-            >
-              Next →
-            </PageLink>
+            <PageLink href={pageHref(currentPage + 1)} disabled={currentPage === totalPages}>Next →</PageLink>
           </div>
         </div>
       )}
@@ -288,27 +349,16 @@ export default async function MeetingsPage({
   );
 }
 
-function PageLink({
-  href,
-  disabled,
-  children,
-}: {
-  href: string;
-  disabled: boolean;
-  children: React.ReactNode;
-}) {
+function PageLink({ href, disabled, children }: { href: string; disabled: boolean; children: React.ReactNode }) {
   if (disabled) {
     return (
-      <span className="rounded-md border border-[var(--color-border)] px-3 py-1.5 text-sm font-medium text-[var(--color-text-faint)]">
+      <span className="rounded-full px-3 py-1.5 text-sm font-medium text-[var(--d-muted)] opacity-50" style={{ border: "1px solid var(--d-border)" }}>
         {children}
       </span>
     );
   }
   return (
-    <Link
-      href={href}
-      className="rounded-md border border-[var(--color-border)] px-3 py-1.5 text-sm font-medium text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-muted-surface)]"
-    >
+    <Link href={href} className="rounded-full px-3 py-1.5 text-sm font-medium text-[var(--d-text)] transition-colors hover:bg-[rgba(15,29,69,.06)]" style={{ border: "1px solid var(--d-border)" }}>
       {children}
     </Link>
   );
@@ -316,27 +366,10 @@ function PageLink({
 
 function MicIcon() {
   return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z" />
       <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
       <line x1="12" y1="19" x2="12" y2="22" />
-    </svg>
-  );
-}
-
-function SparkleIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M12 2l1.6 5.2a4 4 0 0 0 2.6 2.6L21.4 12l-5.2 1.6a4 4 0 0 0-2.6 2.6L12 21.4l-1.6-5.2a4 4 0 0 0-2.6-2.6L2.6 12l5.2-1.6a4 4 0 0 0 2.6-2.6L12 2z" />
     </svg>
   );
 }

@@ -27,10 +27,10 @@ export function NavLink({
     <Link
       href={href}
       onClick={onClick}
-      className={`rounded-lg px-3 py-1.5 font-medium transition-colors ${
+      className={`rounded-full px-3.5 py-2 font-medium transition-colors ${
         active
-          ? "bg-[var(--color-elevated)] text-[var(--color-heading)]"
-          : "text-[var(--color-text-secondary)] hover:bg-[var(--color-muted-surface)] hover:text-[var(--color-heading)]"
+          ? "bg-[var(--d-ink)] text-white"
+          : "text-[var(--d-text)] hover:bg-[rgba(24,24,24,.06)]"
       } ${className}`}
     >
       {children}

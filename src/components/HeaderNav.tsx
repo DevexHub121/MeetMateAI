@@ -32,22 +32,22 @@ export function HeaderNav({
         {/* Everyone's own voice profile — per-user, so no role gate. */}
         <NavLink href="/profile/voice">Voice</NavLink>
         {canManageSettings && <NavLink href="/settings">Settings</NavLink>}
-        <Link href="/meetings/new" className="btn-primary ml-1 px-3.5 py-1.5">
+        <Link href="/meetings/new" className="ml-1 inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-[14px] font-semibold text-white transition-opacity hover:opacity-90" style={{ background: "var(--d-ai-grad)" }}>
           <span className="text-base leading-none">+</span> New meeting
         </Link>
-        <div className="ml-3 flex items-center gap-2.5 border-l border-[var(--color-border)] pl-3">
-          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--color-elevated)] text-xs font-semibold text-[var(--color-heading)]">
+        <div className="ml-3 flex items-center gap-2.5 border-l border-[var(--d-border)] pl-3">
+          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--d-ink)] text-xs font-semibold text-white">
             {initials || "U"}
           </span>
           <div className="hidden text-right leading-tight lg:block">
-            <div className="text-sm font-medium text-[var(--color-heading)]">
+            <div className="text-sm font-medium text-[var(--d-ink)]">
               {user.name}
             </div>
-            <div className="text-xs capitalize text-[var(--color-text-muted)]">
+            <div className="text-xs capitalize text-[var(--d-muted)]">
               {user.role}
             </div>
           </div>
-          <a href={logoutUrl} className="btn-secondary px-3 py-1.5">
+          <a href={logoutUrl} className="rounded-full px-3.5 py-1.5 text-[13px] font-medium text-[var(--d-text)] transition-colors hover:bg-[rgba(24,24,24,.06)]" style={{ border: "1px solid var(--d-border-strong)" }}>
             Sign out
           </a>
         </div>
@@ -59,15 +59,15 @@ export function HeaderNav({
         onClick={() => setOpen((v) => !v)}
         aria-label={open ? "Close menu" : "Open menu"}
         aria-expanded={open}
-        className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-[var(--color-text-secondary)] hover:bg-[var(--color-muted-surface)] hover:text-[var(--color-heading)] md:hidden"
+        className="inline-flex h-9 w-9 items-center justify-center rounded-full text-[var(--d-text)] hover:bg-[rgba(24,24,24,.06)] md:hidden"
       >
         {open ? <CloseIcon /> : <MenuIcon />}
       </button>
 
       {/* Mobile slide-down panel */}
       {open && (
-        <div className="absolute inset-x-0 top-full border-b border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm shadow-black/30 md:hidden">
-          <nav className="mx-auto flex max-w-6xl flex-col gap-1 px-4 py-3 text-sm">
+        <div className="absolute inset-x-0 top-full border-b border-[var(--d-border)] bg-[var(--d-surface)] md:hidden">
+          <nav className="mx-auto flex max-w-[1152px] flex-col gap-1 px-4 py-3 text-sm">
             <NavLink href="/meetings" onClick={close} className="py-2">
               Meetings
             </NavLink>
@@ -85,26 +85,27 @@ export function HeaderNav({
             <Link
               href="/meetings/new"
               onClick={close}
-              className="btn-primary mt-1 px-3.5 py-2"
+              className="mt-1 inline-flex items-center justify-center gap-1.5 rounded-full px-4 py-2.5 font-semibold text-white"
+              style={{ background: "var(--d-ai-grad)" }}
             >
               <span className="text-base leading-none">+</span> New meeting
             </Link>
 
-            <div className="mt-2 flex items-center justify-between border-t border-[var(--color-border)] pt-3">
+            <div className="mt-2 flex items-center justify-between border-t border-[var(--d-border)] pt-3">
               <div className="flex items-center gap-2.5">
-                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--color-elevated)] text-xs font-semibold text-[var(--color-heading)]">
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--d-ink)] text-xs font-semibold text-white">
                   {initials || "U"}
                 </span>
                 <div className="leading-tight">
-                  <div className="text-sm font-medium text-[var(--color-heading)]">
+                  <div className="text-sm font-medium text-[var(--d-ink)]">
                     {user.name}
                   </div>
-                  <div className="text-xs capitalize text-[var(--color-text-muted)]">
+                  <div className="text-xs capitalize text-[var(--d-muted)]">
                     {user.role}
                   </div>
                 </div>
               </div>
-              <a href={logoutUrl} className="btn-secondary px-3 py-1.5">
+              <a href={logoutUrl} className="rounded-full px-3.5 py-1.5 text-[13px] font-medium text-[var(--d-text)]" style={{ border: "1px solid var(--d-border-strong)" }}>
                 Sign out
               </a>
             </div>

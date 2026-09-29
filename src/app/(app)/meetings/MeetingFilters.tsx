@@ -32,10 +32,20 @@ export function MeetingFilters({
   values,
   options,
   showCreator,
+  typeToggle,
 }: {
   values: MeetingFilterValues;
   options: MeetingFilterOptions;
   showCreator: boolean;
+  /**
+   * The All / Internal / Client control, rendered by the server.
+   *
+   * It lives in this bar because it is a filter and belongs with the others,
+   * but it stays a set of real links so each view keeps its own URL. Building
+   * those hrefs needs the server's counts and the active filters, so it is
+   * passed in rather than rebuilt here from a second copy of that logic.
+   */
+  typeToggle?: React.ReactNode;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -111,11 +121,15 @@ export function MeetingFilters({
     (showCreator && Boolean(draft.createdBy));
 
   return (
-    <div className="mb-5 space-y-3">
+    <div
+      className="mb-5 rounded-2xl p-3.5"
+      style={{ background: "var(--d-soft)", border: "1px solid var(--d-border)" }}
+    >
+      {typeToggle}
       <div className="flex flex-wrap items-end gap-2.5">
         <Field label="Search" className="min-w-[15rem] flex-1">
           <div className="relative">
-            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]">
+            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--d-muted)]">
               <SearchIcon />
             </span>
             <input
@@ -126,7 +140,7 @@ export function MeetingFilters({
               className={`${CONTROL} pl-9`}
             />
             {isPending && (
-              <span className="absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 animate-spin rounded-full border-2 border-[var(--color-border-strong)] border-t-transparent" />
+              <span className="absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 animate-spin rounded-full border-2 border-[var(--d-border-strong)] border-t-transparent" />
             )}
           </div>
         </Field>
@@ -213,7 +227,7 @@ export function MeetingFilters({
             onClick={() =>
               push({ q: "", from: "", to: "", participant: "", createdBy: "" })
             }
-            className="text-xs font-medium text-[var(--color-text-muted)] underline underline-offset-2 transition-colors hover:text-[var(--color-heading)]"
+            className="text-xs font-medium text-[var(--d-muted)] underline underline-offset-2 transition-colors hover:text-[var(--d-ink)]"
           >
             Clear all
           </button>
@@ -224,7 +238,7 @@ export function MeetingFilters({
 }
 
 const CONTROL =
-  "block w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-muted-surface)] px-3 py-2 text-sm text-[var(--color-heading)] placeholder:text-[var(--color-text-muted)] shadow-sm outline-none transition-colors focus:border-[var(--color-border-strong)] focus:ring-1 focus:ring-white/15";
+  "d-input block w-full px-3 text-sm";
 
 function Field({
   label,
@@ -237,7 +251,7 @@ function Field({
 }) {
   return (
     <label className={`block ${className}`}>
-      <span className="mb-1.5 block text-xs font-medium text-[var(--color-text-muted)]">
+      <span className="mb-1.5 block text-xs font-medium text-[var(--d-muted)]">
         {label}
       </span>
       {children}
@@ -253,13 +267,13 @@ function Chip({
   onClear: () => void;
 }) {
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-elevated)] py-1 pl-3 pr-1.5 text-xs font-medium text-[var(--color-heading)] ring-1 ring-inset ring-white/10">
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--d-ink)] py-1 pl-3 pr-1.5 text-xs font-medium text-white">
       {children}
       <button
         type="button"
         onClick={onClear}
         aria-label="Remove filter"
-        className="flex h-4 w-4 items-center justify-center rounded-full text-[var(--color-text-muted)] transition-colors hover:bg-white/10 hover:text-[var(--color-heading)]"
+        className="flex h-4 w-4 items-center justify-center rounded-full text-white/70 transition-colors hover:bg-white/20 hover:text-white"
       >
         ×
       </button>

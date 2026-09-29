@@ -493,3 +493,61 @@ body::after {
 @media (prefers-reduced-motion: reduce) {
   .eq-bar-b, .ring-pulse, .blink { animation: none !important; }
 }
+
+/* ─── Dashboard surface ────────────────────────────────────────────
+   The app's paper theme, scoped to .app-light on the (app) shell.
+
+   Deliberately not on :root. The marketing site has its own palette,
+   and the screens that have not been redesigned yet — meeting detail,
+   team, voice, settings — are still built for dark surfaces. Making
+   this global would repaint their backgrounds while their text stayed
+   light, which is worse than leaving them alone until each is done. */
+.app-light {
+  --d-paper: #f4f4f2;
+  --d-surface: #ffffff;
+  --d-soft: #fafaf8;
+  --d-ink: #0f1d45;
+  --d-text: #46463f;
+  --d-muted: #6b7390;
+  --d-border: rgba(15, 29, 69, 0.1);
+  --d-border-strong: rgba(15, 29, 69, 0.16);
+  --d-violet: #7c3aed;
+  --d-blue: #1a8cff;
+  --d-ai-grad: linear-gradient(100deg, #7c3aed, #4f46e5 55%, #0891b2);
+
+  color: var(--d-text);
+}
+
+/*
+ * Repaint the page itself, not just the wrapper.
+ *
+ * body carries the dark app's background, and a body background propagates to
+ * the canvas — so scrolling past the content, or any rubber-band overscroll,
+ * showed charcoal above and below the paper. :has() lets the dashboard claim
+ * the body only on the routes that render it, leaving the screens that are
+ * still dark exactly as they were.
+ */
+body:has(.app-light) {
+  /* Literal, not var(--d-paper): that token is declared on .app-light, which
+     is a descendant — it does not resolve up here. Keep the two in step. */
+  background: #f4f4f2;
+}
+
+/* Date inputs render their own picker chrome from the OS scheme; without
+   this they arrive dark-on-light inside the filter bar. */
+.app-light input[type="date"] { color-scheme: light; }
+
+.app-light .d-input {
+  height: 40px;
+  background: var(--d-surface);
+  border: 1px solid var(--d-border);
+  border-radius: 10px;
+  color: var(--d-ink);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.app-light .d-input::placeholder { color: var(--d-muted); }
+.app-light .d-input:focus {
+  outline: none;
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.14);
+}

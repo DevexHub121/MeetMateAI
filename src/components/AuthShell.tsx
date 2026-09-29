@@ -16,8 +16,6 @@ export function AuthShell({
 }) {
   return (
     <div className="site-light relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-10">
-      <div className="aura h-[26rem] w-[26rem]" style={{ background: "#c7d2fe", top: "-6rem", left: "-4rem" }} />
-      <div className="aura h-[24rem] w-[24rem]" style={{ background: "#ddd6fe", bottom: "-6rem", right: "-4rem" }} />
       <div className="relative w-full max-w-sm">
         <Link href="/" className="mb-8 flex items-center justify-center gap-2.5">
           <span className="flex h-9 w-9 items-center justify-center rounded-lg text-white" style={{ background: "var(--l-grad)" }}>

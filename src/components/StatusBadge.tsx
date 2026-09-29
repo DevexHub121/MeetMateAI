@@ -1,19 +1,31 @@
 import type { MeetingStatus } from "@/db/schema";
 
-// Tuned for the dark surface: soft translucent fill + light text, matching
-// the semantic status pills used across Orbit & Candor.
-const STYLES: Record<MeetingStatus, string> = {
-  scheduled: "bg-violet-500/15 text-violet-300",
-  ready: "bg-white/10 text-neutral-300",
-  recorded: "bg-white/10 text-neutral-300",
-  transcribing: "bg-amber-500/15 text-amber-300",
-  transcribed: "bg-blue-500/15 text-blue-300",
-  analyzing: "bg-purple-500/15 text-purple-300",
-  completed: "bg-emerald-500/15 text-emerald-300",
-  failed: "bg-red-500/15 text-red-300",
+/**
+ * Where a meeting is in the pipeline.
+ *
+ * Tuned for the light dashboard: a tinted fill, ink dark enough to read on it,
+ * a hairline, and a dot. The dot is what carries the state at a glance — the
+ * eye finds a colour in a column of pills long before it reads one.
+ *
+ * The two states that are still working — transcribing and generating minutes —
+ * blink theirs. Nothing else moves, so motion means exactly one thing on this
+ * screen: come back to this row.
+ */
+const STYLES: Record<
+  MeetingStatus,
+  { bg: string; fg: string; ring: string; dot: string; live?: boolean }
+> = {
+  scheduled:    { bg: "rgba(124,58,237,.08)", fg: "#6d28d9", ring: "rgba(124,58,237,.2)", dot: "#7c3aed" },
+  ready:        { bg: "rgba(24,24,24,.05)",   fg: "#46463f", ring: "rgba(24,24,24,.1)",   dot: "#8a8a86" },
+  recorded:     { bg: "rgba(24,24,24,.05)",   fg: "#46463f", ring: "rgba(24,24,24,.1)",   dot: "#8a8a86" },
+  transcribing: { bg: "rgba(217,119,6,.09)",  fg: "#92400e", ring: "rgba(217,119,6,.22)", dot: "#d97706", live: true },
+  transcribed:  { bg: "rgba(37,99,235,.08)",  fg: "#1d4ed8", ring: "rgba(37,99,235,.2)",  dot: "#2563eb" },
+  analyzing:    { bg: "linear-gradient(115deg,rgba(167,139,250,.18),rgba(34,211,238,.14))", fg: "#4338ca", ring: "rgba(129,140,248,.4)", dot: "#818cf8", live: true },
+  completed:    { bg: "rgba(5,150,105,.08)",  fg: "#047857", ring: "rgba(5,150,105,.2)",  dot: "#059669" },
+  failed:       { bg: "rgba(220,38,38,.08)",  fg: "#b91c1c", ring: "rgba(220,38,38,.2)",  dot: "#dc2626" },
 };
 
-const LABELS: Record<MeetingStatus, string> = {
+export const STATUS_LABELS: Record<MeetingStatus, string> = {
   scheduled: "Scheduled",
   ready: "Ready to record",
   recorded: "Recorded",
@@ -25,11 +37,17 @@ const LABELS: Record<MeetingStatus, string> = {
 };
 
 export function StatusBadge({ status }: { status: MeetingStatus }) {
+  const s = STYLES[status];
   return (
     <span
-      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ring-white/10 ${STYLES[status]}`}
+      className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-medium whitespace-nowrap"
+      style={{ background: s.bg, color: s.fg, boxShadow: `inset 0 0 0 1px ${s.ring}` }}
     >
-      {LABELS[status]}
+      <span
+        className={`h-1.5 w-1.5 shrink-0 rounded-full${s.live ? " blink" : ""}`}
+        style={{ background: s.dot }}
+      />
+      {STATUS_LABELS[status]}
     </span>
   );
 }
