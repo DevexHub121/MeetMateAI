@@ -44,12 +44,18 @@ const VALUES = [
 ];
 
 const PLANS = [
-  { name: "Free", price: "$0", per: "forever", tag: "For your next call.",
-    feats: ["Up to 5 meetings / month", "Live transcription", "AI notes by email", "1 member"], cta: "Start free", hot: false },
-  { name: "Pro", price: "$18", per: "per user / mo", tag: "For teams who meet to decide.",
-    feats: ["Unlimited meetings", "Bot for Meet, Zoom & Teams", "Decisions & action items", "Full-text search", "Up to 20 members"], cta: "Start free trial", hot: true },
-  { name: "Business", price: "Custom", per: "let's talk", tag: "For organizations at scale.",
-    feats: ["Everything in Pro", "Unlimited members", "SSO & audit logs", "Priority support"], cta: "Contact sales", hot: false },
+  {
+    name: "Free", price: "$0", per: "forever", tag: "For your next call.",
+    feats: ["Up to 5 meetings / month", "Live transcription", "AI notes by email", "1 member"], cta: "Start free", hot: false
+  },
+  {
+    name: "Pro", price: "$18", per: "per user / mo", tag: "For teams who meet to decide.",
+    feats: ["Unlimited meetings", "Bot for Meet, Zoom & Teams", "Decisions & action items", "Full-text search", "Up to 20 members"], cta: "Start free trial", hot: true
+  },
+  {
+    name: "Business", price: "Custom", per: "let's talk", tag: "For organizations at scale.",
+    feats: ["Everything in Pro", "Unlimited members", "SSO & audit logs", "Priority support"], cta: "Contact sales", hot: false
+  },
 ];
 
 const FAQ = [
@@ -619,7 +625,7 @@ export default async function Landing() {
       <section id="faq" className="bg-white " >
         <div
           className="flex flex-col gap-8 lg:flex-row lg:gap-[clamp(32px,4vw,72px)] mx-auto w-full max-w-[1550px] "
-          style={{ padding : "var(--l-section-y) var(--l-pad)" }} >
+          style={{ padding: "var(--l-section-y) var(--l-pad)" }} >
           <h2
             className="font-[family-name:var(--font-display)] font-bold text-[var(--l-heading)] lg:flex-1"
             style={{ fontSize: H2, lineHeight: 1, letterSpacing: "-0.03em" }}
@@ -678,35 +684,350 @@ export default async function Landing() {
       </section>
 
       {/* ── Footer ─────────────────────────────────────────────────── */}
-      <footer className="border-t border-[var(--l-border)] mx-auto w-full max-w-[1550px]">
+
+
+      <footer className="relative mx-auto w-full max-w-[1550px] overflow-hidden border-t border-[var(--l-border)]">
+
+        {/* Ambient background glow */}
         <div
-          className="flex flex-col gap-6 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between"
-          style={{ padding: "32px var(--l-pad)" }}
+          aria-hidden="true"
+          className="pointer-events-none absolute -right-32 -top-32 h-[320px] w-[320px] rounded-full opacity-20 blur-3xl"
+          style={{
+            background:
+              "radial-gradient(circle, var(--l-violet) 0%, transparent 70%)",
+          }}
+        />
+
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -left-40 bottom-0 h-[260px] w-[260px] rounded-full opacity-10 blur-3xl"
+          style={{
+            background:
+              "radial-gradient(circle, var(--l-violet) 0%, transparent 70%)",
+          }}
+        />
+
+        <div
+          className="relative"
+          style={{
+            padding: "clamp(56px, 7vw, 96px) var(--l-pad) 28px",
+          }}
         >
-          <div>
-            <Image
-              src="/brand/meetmate-wordmark.png"
-              alt="MeetMate"
-              width={137}
-              height={22}
-              className="h-[20px] w-auto"
+
+          {/* =========================================================
+        TOP CTA
+    ========================================================= */}
+          <div
+            className="relative overflow-hidden rounded-[28px] border border-[var(--l-border)]"
+            style={{
+              background:
+                "linear-gradient(135deg, rgba(124,92,255,0.08), rgba(255,255,255,0.7) 55%, rgba(124,92,255,0.04))",
+            }}
+          >
+
+            {/* Decorative grid */}
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 opacity-[0.035]"
+              style={{
+                backgroundImage:
+                  "linear-gradient(var(--l-text) 1px, transparent 1px), linear-gradient(90deg, var(--l-text) 1px, transparent 1px)",
+                backgroundSize: "32px 32px",
+              }}
             />
-            <p className="mt-2 text-[13.5px] text-[var(--l-muted)]">AI notes for every meeting</p>
+
+            <div className="relative flex flex-col gap-8 px-6 py-10 sm:px-10 md:flex-row md:items-center md:justify-between md:px-12 md:py-12">
+
+              {/* CTA Content */}
+              <div className="max-w-[650px]">
+
+                <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[var(--l-border)] bg-white/70 px-3 py-1.5 text-[11px] font-medium text-[var(--l-muted)] backdrop-blur">
+                  <span className="h-1.5 w-1.5 rounded-full bg-[var(--l-violet)]" />
+                  AI meeting memory
+                </div>
+
+                <h2
+                  className="max-w-[620px] font-bold leading-[1.02] tracking-[-0.045em]"
+                  style={{
+                    fontFamily:
+                      '"Bricolage Grotesque", "Bricolage Grotesque Fallback", sans-serif',
+                    fontSize: "clamp(32px, 4vw, 62px)",
+                    color: "var(--l-text)",
+                  }}
+                >
+                  Give your team
+                  <br />
+                  <span className="text-[var(--l-violet)]">
+                    back the meeting.
+                  </span>
+                </h2>
+
+                <p className="mt-5 max-w-[520px] text-[14px] leading-[1.7] text-[var(--l-muted)] sm:text-[15px]">
+                  Stop splitting your attention between listening and writing.
+                  MeetMate captures the conversation and gives everyone the
+                  notes they need — before the next meeting starts.
+                </p>
+              </div>
+
+
+              {/* CTA Button */}
+              <div className="shrink-0">
+
+                <a
+                  href="#pricing"
+                  className="group inline-flex items-center gap-3 rounded-full bg-[var(--l-text)] px-6 py-3.5 text-[13.5px] font-medium text-white shadow-[0_10px_30px_rgba(0,0,0,0.12)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_14px_35px_rgba(0,0,0,0.18)]"
+                >
+                  Start for free
+
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/10 transition-transform duration-300 group-hover:translate-x-0.5">
+                    →
+                  </span>
+                </a>
+
+                <p className="mt-3 text-center text-[11px] text-[var(--l-muted)]">
+                  No credit card · Ready in two minutes
+                </p>
+
+              </div>
+            </div>
           </div>
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-[13.5px] text-[var(--l-text)]">
-            <a href="#how" className="hover:text-[var(--l-violet)]">How it works</a>
-            <a href="#features" className="hover:text-[var(--l-violet)]">Features</a>
-            <a href="#pricing" className="hover:text-[var(--l-violet)]">Pricing</a>
-            <a href="#faq" className="hover:text-[var(--l-violet)]">FAQ</a>
+
+
+          {/* =========================================================
+        FOOTER CONTENT
+    ========================================================= */}
+          <div className="grid grid-cols-1 gap-12 py-14 md:grid-cols-[1.7fr_1fr_1fr_1.2fr] md:gap-8">
+
+            {/* =======================================================
+          BRAND
+      ======================================================= */}
+            <div className="max-w-[390px]">
+
+              <Image
+                src="/brand/meetmate-wordmark.png"
+                alt="MeetMate"
+                width={137}
+                height={22}
+                className="h-[22px] w-auto"
+              />
+
+              <p className="mt-5 max-w-[350px] text-[14px] leading-[1.75] text-[var(--l-muted)]">
+                AI notes for every meeting. MeetMate joins your calls,
+                understands every conversation, and turns it into clear,
+                searchable meeting memory.
+              </p>
+
+
+              {/* Meeting platforms */}
+              <div className="mt-6 flex flex-wrap gap-2">
+
+                {[
+                  "Google Meet",
+                  "Zoom",
+                  "Teams",
+                  "Webex",
+                ].map((platform) => (
+                  <span
+                    key={platform}
+                    className="rounded-full border border-[var(--l-border)] bg-white/50 px-3 py-1.5 text-[11px] text-[var(--l-muted)] transition-colors hover:border-[var(--l-violet)] hover:text-[var(--l-violet)]"
+                  >
+                    {platform}
+                  </span>
+                ))}
+
+              </div>
+            </div>
+
+
+            {/* =======================================================
+          PRODUCT
+      ======================================================= */}
+            <div>
+
+              <h3
+                className="text-[12px] font-semibold uppercase tracking-[0.16em] text-[var(--l-text)]"
+                style={{
+                  fontFamily:
+                    '"Bricolage Grotesque", "Bricolage Grotesque Fallback", sans-serif',
+                }}
+              >
+                Product
+              </h3>
+
+              <nav className="mt-5 flex flex-col gap-3.5">
+
+                {[
+                  ["How it works", "#how"],
+                  ["Features", "#features"],
+                  ["Pricing", "#pricing"],
+                  ["FAQ", "#faq"],
+                ].map(([label, href]) => (
+
+                  <a
+                    key={label}
+                    href={href}
+                    className="group flex w-fit items-center gap-1.5 text-[13.5px] text-[var(--l-muted)] transition-colors hover:text-[var(--l-text)]"
+                  >
+                    {label}
+
+                    <span className="opacity-0 transition-all group-hover:translate-x-0.5 group-hover:opacity-100">
+                      →
+                    </span>
+                  </a>
+
+                ))}
+
+              </nav>
+            </div>
+
+
+            {/* =======================================================
+          INTEGRATIONS
+      ======================================================= */}
+            <div>
+
+              <h3
+                className="text-[12px] font-semibold uppercase tracking-[0.16em] text-[var(--l-text)]"
+                style={{
+                  fontFamily:
+                    '"Bricolage Grotesque", "Bricolage Grotesque Fallback", sans-serif',
+                }}
+              >
+                Works with
+              </h3>
+
+              <nav className="mt-5 flex flex-col gap-3.5 text-[13.5px] text-[var(--l-muted)]">
+
+                <span className="transition-colors hover:text-[var(--l-text)]">
+                  Google Meet
+                </span>
+
+                <span className="transition-colors hover:text-[var(--l-text)]">
+                  Zoom
+                </span>
+
+                <span className="transition-colors hover:text-[var(--l-text)]">
+                  Microsoft Teams
+                </span>
+
+                <span className="transition-colors hover:text-[var(--l-text)]">
+                  Webex
+                </span>
+
+              </nav>
+            </div>
+
+
+            {/* =======================================================
+          MEETMATE
+      ======================================================= */}
+            <div>
+
+              <h3
+                className="text-[12px] font-semibold uppercase tracking-[0.16em] text-[var(--l-text)]"
+                style={{
+                  fontFamily:
+                    '"Bricolage Grotesque", "Bricolage Grotesque Fallback", sans-serif',
+                }}
+              >
+                MeetMate
+              </h3>
+
+              <p className="mt-5 max-w-[260px] text-[13.5px] leading-[1.7] text-[var(--l-muted)]">
+                Built to disappear into your day. Your meetings stay private,
+                searchable, and organized.
+              </p>
+
+
+              {/* Features */}
+              <div className="mt-5 flex flex-col gap-2.5 text-[12px] text-[var(--l-muted)]">
+
+                <span className="flex items-center gap-2">
+                  <span className="h-1.5 w-1.5 rounded-full bg-[var(--l-violet)]" />
+                  Private by default
+                </span>
+
+                <span className="flex items-center gap-2">
+                  <span className="h-1.5 w-1.5 rounded-full bg-[var(--l-violet)]" />
+                  Speaker-attributed notes
+                </span>
+
+                <span className="flex items-center gap-2">
+                  <span className="h-1.5 w-1.5 rounded-full bg-[var(--l-violet)]" />
+                  Search every meeting
+                </span>
+
+              </div>
+            </div>
+
           </div>
-          <span className="text-[12.5px] text-[var(--l-muted)]">
-            © {new Date().getFullYear()} MeetMate · meetmate.devexhub.com · Built by{" "}
-            <a href="https://devexhub.com" className="font-medium text-[var(--l-text)] hover:text-[var(--l-violet)]">
-              Devex Hub
-            </a>
-          </span>
+
+
+          {/* =========================================================
+        DIVIDER
+    ========================================================= */}
+          <div className="h-px w-full bg-[var(--l-border)]" />
+
+
+          {/* =========================================================
+        BOTTOM BAR
+    ========================================================= */}
+          <div className="flex flex-col gap-5 pt-6 text-[11.5px] text-[var(--l-muted)] sm:flex-row sm:items-center sm:justify-between">
+
+            {/* Left */}
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+
+              <span>
+                © {new Date().getFullYear()} MeetMate
+              </span>
+
+              <span className="hidden h-3 w-px bg-[var(--l-border)] sm:block" />
+
+              <a
+                href="#privacy"
+                className="transition-colors hover:text-[var(--l-text)]"
+              >
+                Privacy
+              </a>
+
+              <a
+                href="#terms"
+                className="transition-colors hover:text-[var(--l-text)]"
+              >
+                Terms
+              </a>
+
+            </div>
+
+
+            {/* Right */}
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+
+              <span>
+                meetmate.devexhub.com
+              </span>
+
+              <span className="hidden h-3 w-px bg-[var(--l-border)] sm:block" />
+
+              <span>
+                Built by{" "}
+                <a
+                  href="https://devexhub.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium text-[var(--l-text)] transition-colors hover:text-[var(--l-violet)]"
+                >
+                  Devex Hub
+                </a>
+              </span>
+
+            </div>
+
+          </div>
+
         </div>
       </footer>
+
     </div>
   );
 }
