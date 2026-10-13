@@ -698,7 +698,7 @@ async function meetingWithActiveBot(url: string) {
   return row ?? null;
 }
 
-// Dispatch an AI note-taker bot into a live call (Google Meet or Zoom). Creates the
+// Dispatch an AI note-taker bot into a live call (Google Meet, Zoom or Teams). Creates the
 // provider bot, records a recording_sessions row linking the bot id back to
 // this meeting, and stores the live bot status. The recording itself arrives
 // later via the Recall webhook (/api/recall/webhook), which hands it to

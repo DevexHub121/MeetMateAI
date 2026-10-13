@@ -13,6 +13,7 @@ import {
   createAndRecordMeetLink,
 } from "../actions";
 import {
+  MEETING_LINK_HINT,
   isMeetingLink,
   meetingLinkWarning,
   normalizeMeetingLink,
@@ -506,7 +507,7 @@ export function NewMeetingForm({
         </Link>
       </div>
 
-      {/* Send an AI note-taker into a live Google Meet or Zoom call */}
+      {/* Send an AI note-taker into a live Google Meet, Zoom or Teams call */}
       {noteTakerEnabled && (
         <div className="border-t border-[var(--color-border)] pt-5">
           <h3 className="mb-1 text-sm font-semibold text-[var(--color-heading)]">
@@ -531,7 +532,7 @@ export function NewMeetingForm({
             onKeyDown={(e) => {
               if (e.key === "Enter") e.preventDefault();
             }}
-            placeholder="https://meet.google.com/… or https://zoom.us/j/…"
+            placeholder="https://meet.google.com/…, https://zoom.us/j/… or https://teams.microsoft.com/…"
             className="mb-3 block w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-muted-surface)] px-3 py-2 text-sm text-[var(--color-heading)] placeholder:text-[var(--color-text-muted)] shadow-sm outline-none transition-colors focus:border-[var(--color-border-strong)] focus:ring-1 focus:ring-[var(--color-border-strong)]"
           />
           {meetLinkWarning && (
@@ -554,7 +555,7 @@ export function NewMeetingForm({
             disabled={!meetLinkValid || !recordConsent}
             title={
               !meetLinkValid
-                ? "Enter a valid Google Meet or Zoom link"
+                ? MEETING_LINK_HINT
                 : !recordConsent
                   ? "Confirm participant notification first"
                   : undefined
