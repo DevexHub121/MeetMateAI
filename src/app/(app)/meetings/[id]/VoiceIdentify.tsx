@@ -156,15 +156,17 @@ export function VoiceIdentify({
       </div>
 
       <p className="mt-2 text-xs text-[var(--color-text-muted)]">
-        Compares each voice against the people invited to this meeting — or
-        everyone enrolled, if this meeting has no participant list — who have a{" "}
+        Compares voices against enrolled meeting participants. If fewer than two
+        have profiles, it checks all consented profiles in your organization.
+        People need a{" "}
         <a
           href="/profile/voice"
           className="underline underline-offset-2 hover:text-[var(--color-heading)]"
         >
           voice profile
         </a>
-        . Runs in your browser; audio never leaves this page.
+        {" "}to be matched. Matching runs in your browser; audio never leaves
+        this page.
       </p>
 
       {result && (

@@ -18,6 +18,7 @@ import {
   saveFile,
   saveFileFromUrl,
   createPresignedPut,
+  storedFileSize,
 } from "@/lib/storage";
 import { grantLiveToken } from "@/lib/deepgram";
 import { generateMinutes } from "@/lib/openai";
@@ -39,6 +40,85 @@ import { listEmployees } from "@/lib/employees";
 import { and, desc, eq, gt, inArray, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { mkdtemp, unlink, readdir, readFile } from "fs/promises";
+import { tmpdir } from "os";
+import path from "path";
+import { promisify } from "util";
+import { execFile } from "child_process";
+import { readStoredFile, localStoredFilePath } from "@/lib/storage";
+
+const execFileAsync = promisify(execFile);
+
+const SEGMENT_SECONDS = 10 * 60;
+
+// Speech-focused filter chain.  The high/low-pass filters remove rumble and
+// ultrasonic noise, afftdn suppresses steady background hiss, and loudnorm
+// gives the recognizer a consistent level across microphones.  Keep this as
+// one shared argument list so single-file and segmented recordings behave the
+// same way.
+const SPEECH_FILTER =
+  "highpass=f=80,lowpass=f=12000,afftdn=nr=12:nf=-40,loudnorm=I=-16:TP=-1.5:LRA=11";
+const SPEECH_AUDIO_ARGS = ["-vn", "-ac", "1", "-ar", "16000", "-af", SPEECH_FILTER, "-b:a", "96k"];
+
+// Extract normalized speech into ten-minute files. This helper is intentionally
+// separate from the current single-file path until segment metadata and
+// segmented transcription are wired in.
+async function extractSpeechAudioSegments(relativePath: string, meetingId: string) {
+  const dir = await mkdtemp(path.join(tmpdir(), "meetmate-audio-segments-"));
+  const pattern = path.join(dir, "segment-%05d.mp3");
+  try {
+    const localPath = localStoredFilePath(relativePath);
+    const input = localPath ?? path.join(dir, "input");
+    if (!localPath) {
+      await (await import("fs/promises")).writeFile(input, await readStoredFile(relativePath));
+    }
+    await execFileAsync(process.env.FFMPEG_PATH || "ffmpeg", [
+      "-y", "-i", input, ...SPEECH_AUDIO_ARGS,
+      "-f", "segment", "-segment_time", String(SEGMENT_SECONDS), pattern,
+    ], { windowsHide: true, timeout: 60 * 60_000 });
+    const names = (await readdir(dir)).filter((n) => /^segment-\d{5}\.mp3$/.test(n)).sort();
+    const paths = [];
+    for (const name of names) {
+      const saved = await saveFile("recordings", `${meetingId}-${name}`, await readFile(path.join(dir, name)));
+      paths.push({ path: saved.relativePath, startSeconds: paths.length * SEGMENT_SECONDS, durationSeconds: SEGMENT_SECONDS });
+    }
+    return paths;
+  } finally {
+    for (const name of await readdir(dir).catch(() => [])) await unlink(path.join(dir, name)).catch(() => {});
+    await (await import("fs/promises")).rmdir(dir).catch(() => {});
+  }
+}
+
+// Convert uploaded video to a compact speech track before transcription. This
+// keeps video codec/container noise out of Deepgram and makes large recordings
+// fit comfortably within the transcription memory ceiling.
+async function extractSpeechAudio(relativePath: string, meetingId: string) {
+  const dir = await mkdtemp(path.join(tmpdir(), "meetmate-audio-"));
+  const input = path.join(dir, "input");
+  const output = path.join(dir, "speech.mp3");
+  try {
+    const localPath = localStoredFilePath(relativePath);
+    if (localPath) {
+      // FFmpeg reads the existing file directly; do not buffer the recording.
+      await execFileAsync(process.env.FFMPEG_PATH || "ffmpeg", [
+        "-y", "-i", localPath, ...SPEECH_AUDIO_ARGS, output,
+      ], { windowsHide: true, timeout: 20 * 60_000 });
+    } else {
+      const source = await readStoredFile(relativePath);
+      await (await import("fs/promises")).writeFile(input, source);
+      await execFileAsync(process.env.FFMPEG_PATH || "ffmpeg", [
+        "-y", "-i", input, ...SPEECH_AUDIO_ARGS, output,
+      ], { windowsHide: true, timeout: 20 * 60_000 });
+    }
+    const audio = await (await import("fs/promises")).readFile(output);
+    const saved = await saveFile("recordings", `${meetingId}.mp3`, audio);
+    return saved.relativePath;
+  } finally {
+    await unlink(input).catch(() => {});
+    await unlink(output).catch(() => {});
+    await (await import("fs/promises")).rmdir(dir).catch(() => {});
+  }
+}
 
 // Pull the manual participant rows out of the form. Inputs are named
 // `participantName` / `participantEmail` (repeated), zipped by index. Rows with
@@ -284,12 +364,34 @@ export async function saveMeetingRecording(
   // Deepgram has to guess the container. Falls back to webm (the common case).
   const ext = (file.name.split(".").pop() || "webm").toLowerCase();
   const saved = await saveFile("recordings", `${meetingId}.${ext}`, bytes);
+  // Every finalized recording (uploaded video, imported audio, or microphone
+  // WebM) is normalized before transcription.  Previously this branch only ran
+  // for video files, which meant browser microphone recordings bypassed noise
+  // reduction and loudness normalization.
+  let recordingPath = saved.relativePath;
+  let recordingSegments = null;
+  try {
+    if (file.size > 100 * 1024 * 1024) {
+      await db.update(meetings).set({ processingStage: "extracting", processingProgress: 0, processingTotal: 1 }).where(eq(meetings.id, meetingId));
+      recordingSegments = await extractSpeechAudioSegments(saved.relativePath, meetingId);
+      await db.update(meetings).set({ processingStage: "extracting", processingProgress: 1, processingTotal: 1 }).where(eq(meetings.id, meetingId));
+      recordingPath = recordingSegments[0]?.path ?? saved.relativePath;
+    } else {
+      recordingPath = await extractSpeechAudio(saved.relativePath, meetingId);
+    }
+    await deleteStoredFile(saved.relativePath);
+  } catch (err) {
+    // Keep the existing fallback: an unusual container or an unavailable
+    // local FFmpeg should not discard a user's recording.
+    console.warn("[media] audio extraction failed; using original recording:", err);
+  }
 
   await db
     .update(meetings)
     .set({
       ...CLEARED_BY_NEW_RECORDING,
-      recordingPath: saved.relativePath,
+      recordingPath,
+      recordingSegments,
       durationSeconds,
       status: "recorded",
     })
@@ -400,11 +502,32 @@ export async function finalizeRecordingParts(
     throw new Error(`Could not merge the ${partCount} audio parts (${why})`);
   }
 
+  // Keep the live recorder's chunked upload unchanged, but normalize the
+  // finalized recording before transcription. This improves recognition of
+  // quiet, accented, and interrupted speech without changing live captions.
+  let recordingPath = saved.relativePath;
+  let recordingSegments = null;
+  try {
+    const size = await storedFileSize(saved.relativePath);
+    if (size !== null && size > 100 * 1024 * 1024) {
+      await db.update(meetings).set({ processingStage: "extracting", processingProgress: 0, processingTotal: 1 }).where(eq(meetings.id, meetingId));
+      recordingSegments = await extractSpeechAudioSegments(saved.relativePath, meetingId);
+      await db.update(meetings).set({ processingStage: "extracting", processingProgress: 1, processingTotal: 1 }).where(eq(meetings.id, meetingId));
+      recordingPath = recordingSegments[0]?.path ?? saved.relativePath;
+    } else {
+      recordingPath = await extractSpeechAudio(saved.relativePath, meetingId);
+    }
+    await deleteStoredFile(saved.relativePath);
+  } catch (err) {
+    console.warn("[media] live audio extraction failed; using original recording:", err);
+  }
+
   await db
     .update(meetings)
     .set({
       ...CLEARED_BY_NEW_RECORDING,
-      recordingPath: saved.relativePath,
+      recordingPath,
+      recordingSegments,
       durationSeconds: durationSeconds != null ? String(durationSeconds) : null,
       status: "recorded",
     })
@@ -422,6 +545,18 @@ export async function finalizeRecordingParts(
 
   revalidatePath(`/meetings/${meetingId}`);
   void processMeeting(meetingId);
+}
+
+// Finalize a large existing-file upload after all browser chunks have arrived.
+// Kept as a named wrapper for the upload form; live recording continues to use
+// finalizeRecordingParts directly.
+export async function finalizeChunkedRecording(
+  meetingId: string,
+  partCount: number,
+  ext: string,
+  durationSeconds: number | null,
+) {
+  return finalizeRecordingParts(meetingId, partCount, ext, durationSeconds);
 }
 
 // Save the speaker→person assignments and regenerate the minutes with real
@@ -637,6 +772,30 @@ export async function createAndUploadFile(formData: FormData) {
 
   await saveMeetingRecording(created.id, formData); // stores + starts pipeline
   redirect(`/meetings/${created.id}`);
+}
+
+// Large-file upload flow: create the meeting row first, then upload recording
+// chunks independently and finalize them after the last chunk arrives.
+export async function createMeetingForChunkUpload(formData: FormData): Promise<string> {
+  const now = new Date();
+  const invitees = parseInvitees(formData);
+  await saveParticipants(invitees);
+  const creator = await getCurrentUser();
+  const [created] = await db
+    .insert(meetings)
+    .values({
+      title: titleOrDefault(formData, now),
+      meetingDate: now,
+      invitees,
+      type: parseType(formData),
+      clientName: parseClientName(formData),
+      hostName: creator?.name ?? null,
+      createdByUserId: creator?.id ?? null,
+      orgId: creator?.org?.id ?? null,
+      status: "ready",
+    })
+    .returning({ id: meetings.id });
+  return created.id;
 }
 
 // New-meeting form → "Analyze a recording" from a URL.

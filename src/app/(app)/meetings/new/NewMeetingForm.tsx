@@ -9,6 +9,8 @@ import {
   scheduleMeeting,
   deleteSavedParticipant,
   createAndUploadFile,
+  createMeetingForChunkUpload,
+  finalizeChunkedRecording,
   createAndImportUrl,
   createAndRecordMeetLink,
 } from "../actions";
@@ -89,6 +91,45 @@ export function NewMeetingForm({
   const [meetLink, setMeetLink] = useState("");
   const [recordConsent, setRecordConsent] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const [largeUploadStatus, setLargeUploadStatus] = useState<string | null>(null);
+
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    const fileInput = event.currentTarget.elements.namedItem("recording");
+    const file = fileInput instanceof HTMLInputElement ? fileInput.files?.[0] : null;
+    if (!file || file.size <= 100 * 1024 * 1024) return;
+    event.preventDefault();
+    const form = event.currentTarget;
+    startTransition(async () => {
+      try {
+        setLargeUploadStatus("Preparing upload…");
+        const metadata = new FormData(form);
+        metadata.delete("recording");
+        const meetingId = await createMeetingForChunkUpload(metadata);
+        const ext = (file.name.split(".").pop() || "mp4").toLowerCase();
+        const chunkSize = 8 * 1024 * 1024;
+        const partCount = Math.ceil(file.size / chunkSize);
+        for (let seq = 0; seq < partCount; seq++) {
+          setLargeUploadStatus(`Uploading part ${seq + 1} of ${partCount}…`);
+          const body = new FormData();
+          body.set("seq", String(seq));
+          body.set("ext", ext);
+          body.set("chunk", file.slice(seq * chunkSize, Math.min(file.size, (seq + 1) * chunkSize)), `${meetingId}.${ext}`);
+          let uploaded = false;
+          for (let attempt = 1; attempt <= 3 && !uploaded; attempt++) {
+            const response = await fetch(`/api/recording/${meetingId}/parts`, { method: "POST", body });
+            uploaded = response.ok;
+            if (!uploaded && attempt < 3) await new Promise((resolve) => setTimeout(resolve, attempt * 1000));
+          }
+          if (!uploaded) throw new Error(`Chunk ${seq + 1} upload failed after 3 attempts`);
+        }
+        setLargeUploadStatus("Processing recording…");
+        await finalizeChunkedRecording(meetingId, partCount, ext, null);
+        router.push(`/meetings/${meetingId}`);
+      } catch (error) {
+        setLargeUploadStatus(error instanceof Error ? error.message : "Large upload failed");
+      }
+    });
+  };
 
   const meetLinkValid = isMeetingLink(meetLink);
   const meetLinkWarning = meetLinkValid ? meetingLinkWarning(meetLink) : null;
@@ -144,7 +185,7 @@ export function NewMeetingForm({
   ];
 
   return (
-    <form className="card space-y-6 p-6">
+    <form className="card space-y-6 p-6" onSubmit={handleSubmit}>
       <input type="hidden" name="meetingType" value={type} />
 
       {/* Meeting type */}
@@ -605,6 +646,9 @@ export function NewMeetingForm({
         </p>
 
         <div className={importTab === "file" ? "" : "hidden"}>
+          {largeUploadStatus && (
+            <p className="mb-3 text-sm text-[var(--color-text-secondary)]">{largeUploadStatus}</p>
+          )}
           <div className="flex flex-wrap items-center gap-3">
             <input
               type="file"

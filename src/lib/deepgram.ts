@@ -78,11 +78,10 @@ const TRANSCRIBE_OPTIONS = {
   // Punjabi stretches come through only approximately (nearest Hindi
   // phonetics); GPT-4o cleans this up when writing the minutes.
   language: "multi",
-  // v2 is Deepgram's strongest diarizer (batch-only, which is what we do)
-  // — better at separating voices than the default. Deepgram has no
-  // speaker-count hint, so acoustic separation is as good as it gets here;
-  // naming/splitting further is handled by the LLM speaker-ID pass.
-  diarize_model: "v2",
+  // Explicitly enable speaker diarization. Deepgram rejects diarize_model
+  // when used together with diarize, so use the provider's current default
+  // diarizer while retaining the speaker-turn cleanup below.
+  diarize: true,
   smart_format: true,
   punctuate: true,
   utterances: true,

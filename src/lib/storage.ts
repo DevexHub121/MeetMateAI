@@ -30,7 +30,10 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 //   SPACES_KEY, SPACES_SECRET, SPACES_BUCKET, SPACES_REGION
 //   SPACES_ENDPOINT (optional; defaults to https://<region>.digitaloceanspaces.com)
 
-const STORAGE_ROOT = path.join(process.cwd(), "storage");
+// Local recordings can be placed on a spacious secondary disk. Keep the
+// project-local fallback so existing installations and tests continue to work.
+const STORAGE_ROOT =
+  process.env.MEETMATE_STORAGE_ROOT?.trim() || path.join(process.cwd(), "storage");
 
 const SPACES_BUCKET = process.env.SPACES_BUCKET;
 const SPACES_REGION = process.env.SPACES_REGION;
@@ -487,4 +490,30 @@ export async function readStoredFile(relativePath: string): Promise<Buffer> {
     throw new Error("Invalid storage path");
   }
   return readFile(fullPath);
+}
+
+/** Resolve a local recording without loading its contents. */
+export function localStoredFilePath(relativePath: string): string | null {
+  if (useSpaces) return null;
+  const safe = relativePath.normalize().replace(/^(\.\.(\/|\\|$))+/, "");
+  const fullPath = path.join(STORAGE_ROOT, safe);
+  if (!fullPath.startsWith(STORAGE_ROOT)) throw new Error("Invalid storage path");
+  return fullPath;
+}
+
+/** Store one independently uploaded recording part under a deterministic key. */
+export async function saveStoredPart(relativePath: string, data: Buffer): Promise<void> {
+  const safe = relativePath.normalize().replace(/^(\.\.(\/|\\|$))+/, "");
+  if (!safe.startsWith("recordings/")) throw new Error("Invalid recording part path");
+  if (useSpaces) {
+    await s3().send(new PutObjectCommand({
+      Bucket: SPACES_BUCKET!, Key: safe, Body: data,
+      ContentType: "application/octet-stream", ACL: "private",
+    }));
+    return;
+  }
+  const fullPath = path.join(STORAGE_ROOT, safe);
+  if (!fullPath.startsWith(STORAGE_ROOT)) throw new Error("Invalid storage path");
+  await ensureDir(path.dirname(fullPath));
+  await writeFile(fullPath, data);
 }

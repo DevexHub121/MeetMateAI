@@ -48,6 +48,9 @@ export const meetings = pgTable("meetings", {
   meetingDate: timestamp("meeting_date", { withTimezone: true }),
   invitees: jsonb("invitees").$type<Invitee[]>(), // manual participant list (Bitrix later)
   recordingPath: text("recording_path"),
+  // Audio segments extracted from very large recordings. Each entry stores
+  // the persisted path and its position in the source recording.
+  recordingSegments: jsonb("recording_segments").$type<RecordingSegment[] | null>(),
   // For meetings captured by an AI note-taker bot: the Google Meet URL the bot
   // was sent to, and a short human-readable bot lifecycle label ("joining",
   // "recording", "done", "join_failed") surfaced on the detail page before the
@@ -55,6 +58,9 @@ export const meetings = pgTable("meetings", {
   meetingUrl: text("meeting_url"),
   botStatus: text("bot_status"),
   status: meetingStatus("status").notNull().default("ready"),
+  processingStage: text("processing_stage"),
+  processingProgress: integer("processing_progress").notNull().default(0),
+  processingTotal: integer("processing_total").notNull().default(0),
   error: text("error"),
   transcript: jsonb("transcript").$type<TranscriptResult | null>(),
   speakerMap: jsonb("speaker_map").$type<SpeakerMap | null>(), // "Speaker 0" → person
@@ -73,6 +79,12 @@ export const meetings = pgTable("meetings", {
   tasksSentAt: timestamp("tasks_sent_at", { withTimezone: true }), // when action items were pushed to Make
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+export type RecordingSegment = {
+  path: string;
+  startSeconds: number;
+  durationSeconds: number;
+};
 
 // Per-call OpenAI usage log. Every chat completion MeetMate runs (speaker ID,
 // minutes generation) writes one row here via the runChat() choke point in

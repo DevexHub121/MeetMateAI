@@ -138,14 +138,11 @@ export async function identifySpeakersByVoice(
   );
   let scope: VoiceIdentifyResult["scope"] = "invitees";
 
-  // Nothing to compare against — almost always a meeting recorded before
-  // participant lists were captured, and invitees can't be added afterwards.
-  // Falling back to everyone enrolled is the difference between matching those
-  // recordings and never being able to, so widen the search and raise the bar.
-  if (people.length === 0) {
-    // Widened to everyone enrolled *in this meeting's organization*. The
-    // upstream fallback had no such bound, which in a shared database means
-    // every other customer's staff.
+  // Speaker splitting needs at least two enrolled candidates. A creator profile
+  // alone must not prevent us from finding the other people in the room, so
+  // widen the search when the invitee list supplies fewer than two.
+  if (people.length < 2) {
+    // Widen only to consented profiles in this meeting's organization.
     people = await allEnrolledCandidates(meeting.orgId);
     scope = "everyone";
   }
@@ -161,14 +158,21 @@ export async function identifySpeakersByVoice(
   // "Speaker 1". Do this before matching: once a merged label is torn into
   // "Speaker 1a"/"Speaker 1b", the ordinary label-level match names each half,
   // and the panel shows them as separate speakers to correct by hand.
-  const split = splitMergedLabels(meeting.transcript, stored, roster);
+  const matchOptions =
+    scope === "everyone" ? { minMargin: BROAD_MIN_MARGIN } : {};
+  const split = splitMergedLabels(
+    meeting.transcript,
+    stored,
+    roster,
+    matchOptions,
+  );
   const transcript = split.transcript;
 
   const result = identifyFromWindows(
     transcript,
     stored,
     roster,
-    scope === "everyone" ? { minMargin: BROAD_MIN_MARGIN } : {},
+    matchOptions,
   );
 
   const merged = mergeSpeakerMaps(meeting.speakerMap, result.speakerMap);
