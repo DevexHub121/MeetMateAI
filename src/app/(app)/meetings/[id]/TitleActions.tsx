@@ -121,12 +121,12 @@ export function TitleActions({
 
         {confirming ? (
           <span className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-red-500/30 bg-red-500/10 px-2 py-1">
-            <span className="text-xs font-medium text-red-300">Delete?</span>
+            <span className="meeting-delete-confirm-label text-xs font-medium text-red-300">Delete?</span>
             <button
               type="button"
               onClick={remove}
               disabled={isPending}
-              className="rounded bg-red-500/20 px-2 py-0.5 text-xs font-semibold text-red-200 transition-colors hover:bg-red-500/30 disabled:opacity-50"
+              className="meeting-delete-confirm-yes rounded bg-red-500/20 px-2 py-0.5 text-xs font-semibold text-red-200 transition-colors hover:bg-red-500/30 disabled:opacity-50"
             >
               {isPending ? "Deleting…" : "Yes"}
             </button>

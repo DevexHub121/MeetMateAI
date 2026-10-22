@@ -24,6 +24,33 @@ function lines(transcript: TranscriptResult): string[] {
   return transcript.fullText.split("\n").filter((l) => l.trim().length > 0);
 }
 
+function timedLines(transcript: TranscriptResult): string[] {
+  if (transcript.utterances.length === 0) return lines(transcript);
+  return transcript.utterances.map(
+    (u) => `[${u.start.toFixed(2)}s] ${u.speaker}: ${u.text}`,
+  );
+}
+
+function chunkLines(all: string[], maxChars: number): string[] {
+  if (all.length === 0) return [];
+
+  const chunks: string[] = [];
+  let current: string[] = [];
+  let size = 0;
+
+  for (const line of all) {
+    if (size > 0 && size + line.length + 1 > maxChars) {
+      chunks.push(current.join("\n"));
+      current = [];
+      size = 0;
+    }
+    current.push(line);
+    size += line.length + 1;
+  }
+  if (current.length > 0) chunks.push(current.join("\n"));
+  return chunks;
+}
+
 /**
  * Break a transcript into chunks no larger than `maxChars`.
  *
@@ -38,30 +65,38 @@ export function chunkTranscript(
   transcript: TranscriptResult,
   maxChars: number,
 ): string[] {
-  const all = lines(transcript);
-  if (all.length === 0) return [];
+  return chunkLines(lines(transcript), maxChars);
+}
 
-  const chunks: string[] = [];
-  let current: string[] = [];
-  let size = 0;
-
-  for (const line of all) {
-    // A single turn longer than the budget cannot be split on a boundary that
-    // does not exist, so it becomes its own oversized chunk rather than being
-    // dropped. Rare, and better than losing a monologue.
-    if (size > 0 && size + line.length + 1 > maxChars) {
-      chunks.push(current.join("\n"));
-      current = [];
-      size = 0;
-    }
-    current.push(line);
-    size += line.length + 1;
-  }
-  if (current.length > 0) chunks.push(current.join("\n"));
-  return chunks;
+/** Split the same turns while retaining their absolute recording timestamps. */
+export function chunkTranscriptWithTimestamps(
+  transcript: TranscriptResult,
+  maxChars: number,
+): string[] {
+  return chunkLines(timedLines(transcript), maxChars);
 }
 
 /** Marks where the sample skipped ahead, so the model knows it has a gap. */
+export async function analyzeTranscriptChunks<T>(
+  chunks: readonly string[],
+  analyze: (chunk: string, index: number, total: number) => Promise<T>,
+): Promise<T[]> {
+  const results: T[] = [];
+  for (const [index, chunk] of chunks.entries()) {
+    try {
+      results.push(await analyze(chunk, index, chunks.length));
+    } catch (error) {
+      throw new Error(
+        `Failed to analyze transcript part ${index + 1} of ${chunks.length}: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+        { cause: error },
+      );
+    }
+  }
+  return results;
+}
+
 export const ELISION = "\n[… later in the meeting …]\n";
 
 /**

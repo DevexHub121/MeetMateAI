@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AudioPlayer } from "./AudioPlayer";
+import { RECORDING_SEEK_EVENT } from "./recordingSeek";
 
 /**
  * The recording, as either audio or video.
@@ -35,6 +36,38 @@ export function RecordingMedia({
 }) {
   const [tab, setTab] = useState<"audio" | "video">("audio");
   const [videoFailed, setVideoFailed] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const pendingSeek = useRef<number | null>(null);
+
+  const seekVideo = useCallback((timeSeconds: number) => {
+    const video = videoRef.current;
+    if (!video || video.readyState < 1) {
+      pendingSeek.current = timeSeconds;
+      setTab("video");
+      return;
+    }
+    video.currentTime = Number.isFinite(video.duration)
+      ? Math.min(timeSeconds, video.duration)
+      : timeSeconds;
+    pendingSeek.current = null;
+    video.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, []);
+
+  useEffect(() => {
+    if (!videoSrc) return;
+    const onSeek = (event: Event) => {
+      const timeSeconds = (event as CustomEvent<{ timeSeconds?: number }>).detail
+        ?.timeSeconds;
+      if (typeof timeSeconds !== "number" || !Number.isFinite(timeSeconds)) return;
+      if (videoFailed) {
+        setTab("audio");
+        return;
+      }
+      seekVideo(timeSeconds);
+    };
+    window.addEventListener(RECORDING_SEEK_EVENT, onSeek);
+    return () => window.removeEventListener(RECORDING_SEEK_EVENT, onSeek);
+  }, [seekVideo, videoSrc, videoFailed]);
 
   if (!videoSrc) {
     return <AudioPlayer src={audioSrc} fallbackDuration={fallbackDuration} />;
@@ -77,10 +110,14 @@ export function RecordingMedia({
         // more annoying. Nothing is fetched at all until the tab is picked,
         // which is the saving that actually mattered.
         <video
+          ref={videoRef}
           src={videoSrc}
           controls
           playsInline
           preload="auto"
+          onLoadedMetadata={() => {
+            if (pendingSeek.current !== null) seekVideo(pendingSeek.current);
+          }}
           onError={() => setVideoFailed(true)}
           className="w-full rounded-lg border border-[var(--color-border)] bg-black"
         />

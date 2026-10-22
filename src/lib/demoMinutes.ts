@@ -4,7 +4,7 @@ import { distinctSpeakers, namesFromConversation } from "@/lib/speakers";
 // Marker that flags placeholder minutes in the UI/email. Kept as a constant so
 // the renderer can detect and badge demo output.
 export const DEMO_PREFIX =
-  "⚠️ Demo minutes — no LLM key is configured, so this is a simple placeholder built from the transcript (not AI analysis). Add OPENAI_API_KEY for real minutes.";
+  "⚠️ Demo minutes — demo mode is enabled, so this is a simple placeholder built from the transcript (not AI analysis). Configure an AI minutes provider for real analysis.";
 
 // A naive, key-free stand-in for GPT-4o so the whole pipeline (record →
 // transcribe → minutes → speaker mapping → email) is testable without any LLM
@@ -17,7 +17,6 @@ export function demoMinutes(
     type?: "internal" | "client";
   },
 ): Minutes {
-  const isClient = meeting.type === "client";
   const utterances = transcript.utterances ?? [];
   const speakers = distinctSpeakers(transcript);
   const totalWords = utterances.reduce(
@@ -25,22 +24,12 @@ export function demoMinutes(
     0,
   );
 
-  // Key points: the longest handful of turns (a rough "notable moments").
-  const keyPoints = [...utterances]
-    .sort((a, b) => b.text.length - a.text.length)
-    .slice(0, 6)
-    .map((u) => `${u.speaker}: ${trim(u.text, 160)}`);
-
-  // Action items: turns that sound like commitments/asks. Client meetings get
-  // none (summary + MoM only).
-  const ACTION_RE =
-    /\b(i'?ll|we'?ll|will|need to|have to|going to|let'?s|follow[- ]?up|send|share|prepare|schedule|assign|by (?:eod|tomorrow|today|monday|tuesday|wednesday|thursday|friday|next week))\b/i;
-  const actionItems = isClient
-    ? []
-    : utterances
-        .filter((u) => ACTION_RE.test(u.text) && u.text.split(/\s+/).length >= 4)
-        .slice(0, 6)
-        .map((u) => ({ owner: u.speaker, task: trim(u.text, 160), due: null }));
+  // Deepgram supplies a transcript, not semantic meeting analysis. Do not use
+  // keywords or raw sentences as fake key points/actions: a completed project
+  // update can look identical to a future commitment without an LLM reading the
+  // conversation in context. Empty is more accurate than invented follow-ups.
+  const keyPoints: string[] = [];
+  const actionItems: Minutes["actionItems"] = [];
 
   const attendees =
     speakers.length > 0
@@ -68,10 +57,6 @@ export function demoMinutes(
     actionItems,
     risks: [],
     nextSteps: [],
+    keyMoments: [],
   };
-}
-
-function trim(s: string, n: number): string {
-  const t = s.trim();
-  return t.length > n ? `${t.slice(0, n - 1)}…` : t;
 }

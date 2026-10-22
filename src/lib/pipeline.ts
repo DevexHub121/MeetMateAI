@@ -14,6 +14,42 @@ import { generateMinutes, identifySpeakers } from "@/lib/openai";
 import { applySpeakerMap } from "@/lib/speakers";
 import { mergeSpeakerMaps, withSource } from "@/lib/voice/identify";
 import { sendMinutesEmail } from "@/lib/email";
+import type { RecordingSegment, TranscriptResult } from "@/db/schema";
+
+async function transcribeStoredSegments(segments: RecordingSegment[], meetingId: string): Promise<TranscriptResult> {
+  const merged: TranscriptResult = { utterances: [], fullText: "" };
+  const ordered = [...segments].sort((a, b) => a.startSeconds - b.startSeconds);
+  await db.update(meetings).set({ processingStage: "transcribing", processingProgress: 0, processingTotal: ordered.length }).where(eq(meetings.id, meetingId));
+  for (let index = 0; index < ordered.length; index++) {
+    const segment = ordered[index];
+    let result: TranscriptResult;
+    let lastError: unknown;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        const audio = await readStoredFile(segment.path);
+        result = await transcribeAudio(audio);
+        lastError = undefined;
+        break;
+      } catch (err) {
+        lastError = err;
+        if (attempt < 3) await new Promise((resolve) => setTimeout(resolve, attempt * 1000));
+      }
+    }
+    if (lastError || !result!) throw lastError ?? new Error("Segment transcription failed");
+    const offset = segment.startSeconds || 0;
+    for (const utterance of result.utterances ?? []) {
+      merged.utterances.push({
+        ...utterance,
+        start: utterance.start + offset,
+        end: utterance.end + offset,
+      });
+    }
+    if (result.fullText?.trim()) merged.fullText += `${merged.fullText ? " " : ""}${result.fullText.trim()}`;
+    await db.update(meetings).set({ processingStage: "transcribing", processingProgress: index + 1, processingTotal: ordered.length }).where(eq(meetings.id, meetingId));
+  }
+  merged.utterances.sort((a, b) => a.start - b.start);
+  return merged;
+}
 
 /**
  * What a new recording invalidates.
@@ -30,6 +66,7 @@ export const CLEARED_BY_NEW_RECORDING = {
   transcript: null,
   speakerMap: null,
   minutes: null,
+  recordingSegments: null,
   error: null,
 } as const;
 
@@ -175,8 +212,12 @@ export async function processMeeting(meetingId: string) {
         }
       }
 
-      const audio = await readStoredFile(meeting.recordingPath);
-      transcript = await transcribeAudio(audio);
+      if (meeting.recordingSegments?.length) {
+        transcript = await transcribeStoredSegments(meeting.recordingSegments, meetingId);
+      } else {
+        const audio = await readStoredFile(meeting.recordingPath);
+        transcript = await transcribeAudio(audio);
+      }
     }
     if (!transcript) throw new Error("Transcription produced nothing");
 
@@ -258,6 +299,8 @@ export async function processMeeting(meetingId: string) {
         roleLabels: [meeting.hostName, meeting.clientName],
         meetingDate: meeting.meetingDate,
         type: meeting.type,
+        hostName: meeting.hostName,
+        clientName: meeting.clientName,
       },
       meetingId,
     );

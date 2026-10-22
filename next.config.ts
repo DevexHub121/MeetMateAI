@@ -11,8 +11,12 @@ const nextConfig: NextConfig = {
     // is 1MB, which rejects anything but a few seconds of audio with a 500.
     // Raise it to comfortably fit long meeting recordings.
     serverActions: {
-      bodySizeLimit: "50mb",
+      bodySizeLimit: "100mb",
     },
+    // Next.js also applies a separate client/middleware request cap before
+    // the server action is reached. Keep it aligned with serverActions so
+    // large local recording uploads are not truncated at the default 10 MB.
+    proxyClientMaxBodySize: "100mb",
   },
 };
 

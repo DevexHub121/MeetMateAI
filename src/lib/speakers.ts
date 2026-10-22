@@ -3,12 +3,14 @@ import type {
   TranscriptResult,
   TranscriptUtterance,
 } from "@/db/schema";
+import { isLikelyPersonName } from "@/lib/attendees";
 
 export type SpeakerSummary = {
   label: string; // e.g. "Speaker 0"
   turns: number; // how many times they spoke
   words: number; // approximate word count (a proxy for talk time)
-  sample: string; // first non-trivial thing they said
+  sampleSpokenAt: number; // recording timestamp for the displayed sample
+  sample: string; // longest early utterance used as a preview
 };
 
 // Summarise the distinct speakers in a transcript so the UI can show who's who
@@ -26,12 +28,14 @@ export function distinctSpeakers(
       existing.words += words;
       if (existing.sample.length < 40 && u.text.trim().length > existing.sample.length) {
         existing.sample = u.text.trim();
+        existing.sampleSpokenAt = u.start;
       }
     } else {
       map.set(u.speaker, {
         label: u.speaker,
         turns: 1,
         words,
+        sampleSpokenAt: u.start,
         sample: u.text.trim(),
       });
     }
@@ -67,6 +71,40 @@ const STOPWORDS = new Set([
   "Team",
   "Everyone",
   "Speaker",
+  "Also",
+  "Free",
+  "Comfortable",
+  "With",
+  "Not",
+  "Confused",
+  "That",
+  "What",
+  "Thinking",
+  "Something",
+  "Costs",
+  "Open",
+  "Changing",
+  "Know",
+  "You",
+  "Here",
+  "Confident",
+  "History",
+  "How",
+  "Particular",
+  "More",
+  "However",
+  "Future",
+  "Do",
+  "Going",
+  "Like",
+  "Happy",
+  "Expecting",
+  "Suggesting",
+  "Requesting",
+  "Money",
+  "Me",
+  "Very",
+  "For",
 ]);
 
 export function namesFromConversation(
@@ -76,9 +114,9 @@ export function namesFromConversation(
   const found = new Map<string, string>(); // lowercase → original casing
   const cap = "([A-Z][a-z]{1,20})";
   const patterns = [
-    new RegExp(`\\b(?:i'?m|i am|this is|my name is)\\s+${cap}`, "gi"),
-    new RegExp(`\\b(?:thanks|thank you|hi|hey|hello|over to|thanks to)[,\\s]+${cap}`, "gi"),
-    new RegExp(`\\b${cap}\\s*,\\s*(?:can|could|would|what|do|please|your)`, "gi"),
+    new RegExp(`\\b(?:[Ii]'?m|[Ii] am|[Tt]his is|[Mm]y name is)\\s+${cap}`, "g"),
+    new RegExp(`\\b(?:[Tt]hanks|[Tt]hank you|[Hh]i|[Hh]ey|[Hh]ello|[Oo]ver to|[Tt]hanks to)[,\\s]+${cap}`, "g"),
+    new RegExp(`\\b${cap}\\s*,\\s*(?:[Cc]an|[Cc]ould|[Ww]ould|[Ww]hat|[Dd]o|[Pp]lease|[Yy]our)`, "g"),
   ];
 
   for (const u of transcript.utterances) {
@@ -87,7 +125,7 @@ export function namesFromConversation(
         const raw = m[1];
         if (!raw) continue;
         const name = raw[0].toUpperCase() + raw.slice(1).toLowerCase();
-        if (STOPWORDS.has(name)) continue;
+        if (STOPWORDS.has(name) || !isLikelyPersonName(name)) continue;
         if (!found.has(name.toLowerCase())) found.set(name.toLowerCase(), name);
       }
     }

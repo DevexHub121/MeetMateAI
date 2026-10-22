@@ -30,7 +30,10 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 //   SPACES_KEY, SPACES_SECRET, SPACES_BUCKET, SPACES_REGION
 //   SPACES_ENDPOINT (optional; defaults to https://<region>.digitaloceanspaces.com)
 
-const STORAGE_ROOT = path.join(process.cwd(), "storage");
+// Local recordings can be placed on a spacious secondary disk. Keep the
+// project-local fallback so existing installations and tests continue to work.
+const STORAGE_ROOT =
+  process.env.MEETMATE_STORAGE_ROOT?.trim() || path.join(process.cwd(), "storage");
 
 const SPACES_BUCKET = process.env.SPACES_BUCKET;
 const SPACES_REGION = process.env.SPACES_REGION;
@@ -43,6 +46,19 @@ const SPACES_ENDPOINT =
 const useSpaces = Boolean(
   SPACES_BUCKET && SPACES_REGION && SPACES_KEY && SPACES_SECRET,
 );
+
+export function normalizeRecordingPartKey(relativePath: string): string {
+  const safe = path.posix.normalize(relativePath.replace(/\\/g, "/"));
+  if (
+    path.posix.isAbsolute(safe) ||
+    safe === ".." ||
+    safe.startsWith("../") ||
+    !safe.startsWith("recordings/")
+  ) {
+    throw new Error("Invalid recording part path");
+  }
+  return safe;
+}
 
 let _s3: S3Client | null = null;
 function s3(): S3Client {
@@ -487,4 +503,29 @@ export async function readStoredFile(relativePath: string): Promise<Buffer> {
     throw new Error("Invalid storage path");
   }
   return readFile(fullPath);
+}
+
+/** Resolve a local recording without loading its contents. */
+export function localStoredFilePath(relativePath: string): string | null {
+  if (useSpaces) return null;
+  const safe = relativePath.normalize().replace(/^(\.\.(\/|\\|$))+/, "");
+  const fullPath = path.join(STORAGE_ROOT, safe);
+  if (!fullPath.startsWith(STORAGE_ROOT)) throw new Error("Invalid storage path");
+  return fullPath;
+}
+
+/** Store one independently uploaded recording part under a deterministic key. */
+export async function saveStoredPart(relativePath: string, data: Buffer): Promise<void> {
+  const safe = normalizeRecordingPartKey(relativePath);
+  if (useSpaces) {
+    await s3().send(new PutObjectCommand({
+      Bucket: SPACES_BUCKET!, Key: safe, Body: data,
+      ContentType: "application/octet-stream", ACL: "private",
+    }));
+    return;
+  }
+  const fullPath = path.join(STORAGE_ROOT, ...safe.split("/"));
+  if (!fullPath.startsWith(STORAGE_ROOT)) throw new Error("Invalid storage path");
+  await ensureDir(path.dirname(fullPath));
+  await writeFile(fullPath, data);
 }

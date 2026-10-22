@@ -7,6 +7,7 @@ import type { MeetingStatus } from "@/db/schema";
 // (rendered alongside) re-fetches so this steps forward on its own.
 
 const STAGES: { label: string; sub: string }[] = [
+  { label: "Preparing audio", sub: "Extracting and normalizing speech" },
   {
     label: "Transcribing audio",
     sub: "Turning speech into text with speaker diarization",
@@ -21,22 +22,24 @@ const STAGES: { label: string; sub: string }[] = [
   },
 ];
 
-function activeStage(status: MeetingStatus): number {
+function activeStage(status: MeetingStatus, stage?: string | null): number {
+  if (stage === "extracting") return 0;
+  if (stage === "transcribing") return 1;
   switch (status) {
     case "recorded":
     case "transcribing":
-      return 0;
-    case "transcribed":
       return 1;
-    case "analyzing":
+    case "transcribed":
       return 2;
+    case "analyzing":
+      return 3;
     default:
       return STAGES.length; // completed / everything done
   }
 }
 
-export function AIPipeline({ status }: { status: MeetingStatus }) {
-  const active = activeStage(status);
+export function AIPipeline({ status, stage, progress, total }: { status: MeetingStatus; stage?: string | null; progress?: number; total?: number }) {
+  const active = activeStage(status, stage);
 
   return (
     <div className="ai-border ai-glow card overflow-hidden p-6">
@@ -56,7 +59,7 @@ export function AIPipeline({ status }: { status: MeetingStatus }) {
             MeetMate is generating your minutes
           </p>
           <p className="mt-0.5 text-xs text-[var(--color-text-muted)]">
-            Updates live — this usually takes under a minute.
+            {progress && total ? `${progress} of ${total} complete` : "Updates live while processing."}
           </p>
         </div>
       </div>

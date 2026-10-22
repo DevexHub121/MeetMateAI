@@ -11,11 +11,14 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  analyzeTranscriptChunks,
   chunkTranscript,
+  chunkTranscriptWithTimestamps,
   sampleTranscript,
   ELISION,
 } from "../src/lib/transcriptChunks.ts";
 import type { TranscriptResult } from "../src/db/schema.ts";
+import { normalizeRecordingPartKey } from "../src/lib/storage.ts";
 
 function transcript(turns: [string, string][]): TranscriptResult {
   const utterances = turns.map(([speaker, text], i) => ({
@@ -50,6 +53,20 @@ test("a short transcript stays a single chunk", () => {
   const chunks = chunkTranscript(t, 45000);
   assert.equal(chunks.length, 1);
   assert.equal(chunks[0], t.fullText);
+});
+
+test("timestamped chunks preserve utterance times across all parts", () => {
+  const t = transcript([
+    ["Speaker 0", "Opening topic"],
+    ["Speaker 1", "Second topic"],
+    ["Speaker 0", "Closing topic"],
+  ]);
+  const chunks = chunkTranscriptWithTimestamps(t, 36);
+
+  assert.ok(chunks.length > 1);
+  assert.match(chunks.join("\n"), /\[0\.00s\] Speaker 0: Opening topic/);
+  assert.match(chunks.join("\n"), /\[10\.00s\] Speaker 1: Second topic/);
+  assert.match(chunks.join("\n"), /\[20\.00s\] Speaker 0: Closing topic/);
 });
 
 test("an empty transcript yields no chunks", () => {
@@ -115,6 +132,48 @@ test("a three-hour meeting splits into a handful of chunks, not hundreds", () =>
   const t = longMeeting(950); // ~190k chars
   const chunks = chunkTranscript(t, 40000);
   assert.ok(chunks.length >= 4 && chunks.length <= 8, `got ${chunks.length}`);
+});
+
+test("every chunk is analyzed sequentially and kept in order", async () => {
+  const analyzed: string[] = [];
+  let active = 0;
+  let maxActive = 0;
+  const results = await analyzeTranscriptChunks(["first", "second", "third"], async (chunk) => {
+    active++;
+    maxActive = Math.max(maxActive, active);
+    await new Promise((resolve) => setTimeout(resolve, 1));
+    analyzed.push(chunk);
+    active--;
+    return chunk.toUpperCase();
+  });
+
+  assert.deepEqual(analyzed, ["first", "second", "third"]);
+  assert.deepEqual(results, ["FIRST", "SECOND", "THIRD"]);
+  assert.equal(maxActive, 1);
+});
+
+test("a failed chunk stops analysis and identifies the missing part", async () => {
+  const analyzed: string[] = [];
+  await assert.rejects(
+    analyzeTranscriptChunks(["first", "second", "third"], async (chunk) => {
+      analyzed.push(chunk);
+      if (chunk === "second") throw new Error("model unavailable");
+      return chunk;
+    }),
+    /Failed to analyze transcript part 2 of 3: model unavailable/,
+  );
+  assert.deepEqual(analyzed, ["first", "second"]);
+});
+
+test("recording part keys remain valid on Windows-style paths", () => {
+  assert.equal(
+    normalizeRecordingPartKey("recordings\\meeting-id\\part-00000.mp4"),
+    "recordings/meeting-id/part-00000.mp4",
+  );
+  assert.throws(
+    () => normalizeRecordingPartKey("recordings/../outside.mp4"),
+    /Invalid recording part path/,
+  );
 });
 
 // --- sampling for speaker identification ------------------------------------

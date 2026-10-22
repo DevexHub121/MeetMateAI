@@ -1,6 +1,9 @@
+"use client";
+
 import type { SpeakerMap } from "@/db/schema";
 import type { SpeakerSummary } from "@/lib/speakers";
 import { assignSpeakers } from "../actions";
+import { seekRecording } from "./recordingSeek";
 
 type Person = { name: string; email: string | null };
 
@@ -46,15 +49,26 @@ export function SpeakerMapping({
             >
               <input type="hidden" name="speakerLabel" value={s.label} />
               <div className="min-w-0 flex-1">
-                <div className="text-sm font-medium text-[var(--color-heading)]">
-                  {s.label}
+                <button
+                  type="button"
+                  onClick={() => seekRecording(s.sampleSpokenAt)}
+                  aria-label={`Jump to ${s.label}'s sample at ${timecode(s.sampleSpokenAt)}`}
+                  title={`Jump to this speech at ${timecode(s.sampleSpokenAt)} in the recording`}
+                  className="block max-w-full rounded-md text-left outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-border-strong)]"
+                >
+                  <span className="text-sm font-medium text-[var(--color-heading)]">
+                    {s.label}
+                  </span>
+                  <span className="ml-2 font-mono text-xs tabular-nums text-[var(--color-bg-2)]">
+                    {timecode(s.sampleSpokenAt)}
+                  </span>
                   <span className="ml-2 text-xs font-normal text-[var(--color-text-muted)]">
                     {s.turns} turn{s.turns === 1 ? "" : "s"} · ~{s.words} words
                   </span>
-                </div>
-                <div className="mt-0.5 truncate text-xs italic text-[var(--color-text-secondary)]">
-                  “{s.sample}”
-                </div>
+                  <span className="mt-0.5 block truncate text-xs italic text-[var(--color-text-secondary)]">
+                    “{s.sample}”
+                  </span>
+                </button>
                 {/* Where the current name came from. Worth showing: a voiceprint
                     match and a guess from the words are very different claims,
                     and the reader should be able to tell them apart. */}
@@ -104,6 +118,17 @@ export function SpeakerMapping({
       </form>
     </section>
   );
+}
+
+function timecode(seconds: number): string {
+  if (!Number.isFinite(seconds) || seconds < 0) return "0:00";
+  const total = Math.floor(seconds);
+  const hours = Math.floor(total / 3600);
+  const minutes = Math.floor((total % 3600) / 60);
+  const remainingSeconds = total % 60;
+  return hours > 0
+    ? `${hours}:${String(minutes).padStart(2, "0")}:${String(remainingSeconds).padStart(2, "0")}`
+    : `${minutes}:${String(remainingSeconds).padStart(2, "0")}`;
 }
 
 function SparkleIcon() {

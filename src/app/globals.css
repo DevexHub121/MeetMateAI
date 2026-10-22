@@ -25,6 +25,7 @@
   --color-text-faint: #6e6e6a;
   /* Inverted / ink — light surface + dark text for primary actions. */
   --color-bg-2: #f4f4f2;
+  --color-on-bg-2: #181818;
   --radius: 0.5rem;
 
   /* ── AI accent layer ──────────────────────────────────────────
@@ -192,7 +193,7 @@ body::after {
 
   /* Primary action: inverted ink — light surface, dark label. */
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-1.5 rounded-lg bg-[var(--color-bg-2)] px-4 py-2 text-sm font-medium text-[#181818] shadow-sm transition-all hover:bg-white active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-1.5 rounded-lg bg-[var(--color-bg-2)] px-4 py-2 text-sm font-medium text-[var(--color-on-bg-2)] shadow-sm transition-all hover:bg-white active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50;
   }
 
   .btn-secondary {
@@ -241,6 +242,29 @@ body::after {
   background-image: var(--gradient-ai-soft);
   border: 1px solid rgba(167, 139, 250, 0.28);
   box-shadow: 0 0 18px -8px rgba(139, 92, 246, 0.6);
+}
+
+.app-light .ai-chip {
+  color: #5b21b6;
+  background-image: linear-gradient(
+    115deg,
+    rgba(124, 58, 237, 0.1),
+    rgba(8, 145, 178, 0.09)
+  );
+  border-color: rgba(91, 33, 182, 0.24);
+}
+
+.app-light .meeting-delete-confirm-label {
+  color: #b91c1c;
+}
+
+.app-light .meeting-delete-confirm-yes {
+  color: #991b1b;
+  background-color: rgba(239, 68, 68, 0.16);
+}
+
+.app-light .meeting-delete-confirm-yes:hover {
+  background-color: rgba(239, 68, 68, 0.24);
 }
 
 /* AI gradient action button — reserved for genuinely AI operations
@@ -692,6 +716,7 @@ body::after {
   --color-text-faint: #9aa0b4;
   /* Primary buttons invert: on paper the ink surface is the dark one. */
   --color-bg-2: #0f1d45;
+  --color-on-bg-2: #ffffff;
 
   color: var(--d-text);
 }

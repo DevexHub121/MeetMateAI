@@ -17,7 +17,7 @@ import { processMeeting } from "@/lib/pipeline";
  *
  * Runs on Node because it writes to the database and hands off to the pipeline.
  * The body can be several megabytes for a long diarized meeting — route
- * handlers accept that (the 50 MB serverActions bodySizeLimit does not apply
+ * handlers accept that (the 100 MB serverActions bodySizeLimit does not apply
  * here), but it is the failure mode Deepgram documents for callbacks, so it is
  * worth knowing that is what a sudden 413 would mean.
  */

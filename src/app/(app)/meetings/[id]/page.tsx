@@ -484,7 +484,7 @@ export default async function MeetingPage({
           {processing && (
             <>
               <AutoRefresh />
-              <AIPipeline status={meeting.status} />
+              <AIPipeline status={meeting.status} stage={meeting.processingStage} progress={meeting.processingProgress} total={meeting.processingTotal} />
               {/* Offered unconditionally rather than after some timeout,
                   because nothing on the row records when processing began —
                   and a quiet link costs a reader nothing while the pipeline is
