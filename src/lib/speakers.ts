@@ -9,7 +9,8 @@ export type SpeakerSummary = {
   label: string; // e.g. "Speaker 0"
   turns: number; // how many times they spoke
   words: number; // approximate word count (a proxy for talk time)
-  sample: string; // first non-trivial thing they said
+  sampleSpokenAt: number; // recording timestamp for the displayed sample
+  sample: string; // longest early utterance used as a preview
 };
 
 // Summarise the distinct speakers in a transcript so the UI can show who's who
@@ -27,12 +28,14 @@ export function distinctSpeakers(
       existing.words += words;
       if (existing.sample.length < 40 && u.text.trim().length > existing.sample.length) {
         existing.sample = u.text.trim();
+        existing.sampleSpokenAt = u.start;
       }
     } else {
       map.set(u.speaker, {
         label: u.speaker,
         turns: 1,
         words,
+        sampleSpokenAt: u.start,
         sample: u.text.trim(),
       });
     }

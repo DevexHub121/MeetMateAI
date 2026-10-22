@@ -6,7 +6,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { mentionedOnly, resolveAttendees , isNameEvidenced, isRoleLabel } from "../src/lib/attendees.ts";
-import { namesFromConversation } from "../src/lib/speakers.ts";
+import { distinctSpeakers, namesFromConversation } from "../src/lib/speakers.ts";
 
 const INVITED = ["Ankita Sharma", "Karishma", "Shivam Setia", "Saniya Tanyal"];
 
@@ -160,4 +160,29 @@ test("conversation name detection ignores common words after introduction cues",
   };
 
   assert.deepEqual(namesFromConversation(transcript), ["Amos"]);
+});
+
+test("speaker summary timestamp matches the displayed sample utterance", () => {
+  const transcript = {
+    utterances: [
+      { speaker: "Speaker 0", text: "Hi", start: 12.5, end: 13 },
+      { speaker: "Speaker 1", text: "Second speaker", start: 18, end: 19 },
+      {
+        speaker: "Speaker 0",
+        text: "Here is the longer sample speech from this speaker",
+        start: 32,
+        end: 34,
+      },
+    ],
+    fullText: "",
+  };
+
+  const speakers = distinctSpeakers(transcript);
+  const speaker0 = speakers.find((speaker) => speaker.label === "Speaker 0");
+  assert.equal(speaker0?.sample, "Here is the longer sample speech from this speaker");
+  assert.equal(speaker0?.sampleSpokenAt, 32);
+  assert.equal(
+    speakers.find((speaker) => speaker.label === "Speaker 1")?.sampleSpokenAt,
+    18,
+  );
 });
