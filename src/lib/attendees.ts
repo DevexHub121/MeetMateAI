@@ -51,6 +51,19 @@ const LABEL_PATTERNS = [
   /^participants?\s*\d*$/i,
 ];
 
+// Common words that language models and transcript capitalization can mistake
+// for names, especially after phrases such as "I am" or "thanks".
+const NON_NAME_WORDS = new Set(
+  `about also am an and are as at be been being but by can comfortable confused costs could changing did do does doing for free from going happy has have he her here him his how however i if in into is it its know like me more most my money no not of on open or our out particular requesting she so some suggesting something than that the their them then there these they thinking this those to us very was we were what when where which who why with would you your confident future history expecting`.split(
+    " ",
+  ),
+);
+
+export function isLikelyPersonName(name: string): boolean {
+  const parts = norm(name).split(" ").filter(Boolean);
+  return parts.length > 0 && !parts.some((part) => NON_NAME_WORDS.has(part));
+}
+
 /** True when a "name" is one of MeetMate's own placeholders rather than a person. */
 export function isRoleLabel(name: string, extra: readonly string[] = []): boolean {
   const k = norm(name);
@@ -129,6 +142,9 @@ export function mentionedOnly(
       .filter((n) => {
         const k = norm(n);
         if (!k) return false;
+        // Do not render ordinary transcript vocabulary as people just because
+        // the model or transcript capitalization presented it as a name.
+        if (!isLikelyPersonName(n)) return false;
         // Our own placeholders, not people.
         if (isRoleLabel(n, opts.roleLabels ?? [])) return false;
         // Nobody said this name. Whatever produced it, it is not a mention.

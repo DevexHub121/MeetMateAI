@@ -47,6 +47,19 @@ const useSpaces = Boolean(
   SPACES_BUCKET && SPACES_REGION && SPACES_KEY && SPACES_SECRET,
 );
 
+export function normalizeRecordingPartKey(relativePath: string): string {
+  const safe = path.posix.normalize(relativePath.replace(/\\/g, "/"));
+  if (
+    path.posix.isAbsolute(safe) ||
+    safe === ".." ||
+    safe.startsWith("../") ||
+    !safe.startsWith("recordings/")
+  ) {
+    throw new Error("Invalid recording part path");
+  }
+  return safe;
+}
+
 let _s3: S3Client | null = null;
 function s3(): S3Client {
   if (!_s3) {
@@ -503,8 +516,7 @@ export function localStoredFilePath(relativePath: string): string | null {
 
 /** Store one independently uploaded recording part under a deterministic key. */
 export async function saveStoredPart(relativePath: string, data: Buffer): Promise<void> {
-  const safe = relativePath.normalize().replace(/^(\.\.(\/|\\|$))+/, "");
-  if (!safe.startsWith("recordings/")) throw new Error("Invalid recording part path");
+  const safe = normalizeRecordingPartKey(relativePath);
   if (useSpaces) {
     await s3().send(new PutObjectCommand({
       Bucket: SPACES_BUCKET!, Key: safe, Body: data,
@@ -512,7 +524,7 @@ export async function saveStoredPart(relativePath: string, data: Buffer): Promis
     }));
     return;
   }
-  const fullPath = path.join(STORAGE_ROOT, safe);
+  const fullPath = path.join(STORAGE_ROOT, ...safe.split("/"));
   if (!fullPath.startsWith(STORAGE_ROOT)) throw new Error("Invalid storage path");
   await ensureDir(path.dirname(fullPath));
   await writeFile(fullPath, data);

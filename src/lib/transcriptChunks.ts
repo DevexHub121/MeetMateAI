@@ -62,6 +62,26 @@ export function chunkTranscript(
 }
 
 /** Marks where the sample skipped ahead, so the model knows it has a gap. */
+export async function analyzeTranscriptChunks<T>(
+  chunks: readonly string[],
+  analyze: (chunk: string, index: number, total: number) => Promise<T>,
+): Promise<T[]> {
+  const results: T[] = [];
+  for (const [index, chunk] of chunks.entries()) {
+    try {
+      results.push(await analyze(chunk, index, chunks.length));
+    } catch (error) {
+      throw new Error(
+        `Failed to analyze transcript part ${index + 1} of ${chunks.length}: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+        { cause: error },
+      );
+    }
+  }
+  return results;
+}
+
 export const ELISION = "\n[… later in the meeting …]\n";
 
 /**

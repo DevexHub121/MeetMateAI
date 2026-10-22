@@ -6,6 +6,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { mentionedOnly, resolveAttendees , isNameEvidenced, isRoleLabel } from "../src/lib/attendees.ts";
+import { namesFromConversation } from "../src/lib/speakers.ts";
 
 const INVITED = ["Ankita Sharma", "Karishma", "Shivam Setia", "Saniya Tanyal"];
 
@@ -121,4 +122,42 @@ test("a full name needs every part spoken", () => {
 
 test("evidence is case and punctuation insensitive", () => {
   assert.equal(isNameEvidenced("rahul", "Thanks, RAHUL!"), true);
+});
+
+test("ordinary words are not shown as mentioned people", () => {
+  assert.deepEqual(
+    mentionedOnly(
+      [
+        "Amos",
+        "Also",
+        "Free",
+        "Comfortable",
+        "Confused",
+        "Thinking",
+        "Something",
+        "Changing",
+        "Confident",
+        "Haminder",
+      ],
+      [],
+    ),
+    ["Amos", "Haminder"],
+  );
+});
+
+test("conversation name detection ignores common words after introduction cues", () => {
+  const transcript = {
+    utterances: [
+      {
+        speaker: "Speaker 0",
+        text: "I'm free and comfortable. My name is Amos. Thanks, Also.",
+        start: 0,
+        end: 5,
+      },
+    ],
+    fullText:
+      "Speaker 0: I'm free and comfortable. My name is Amos. Thanks, Also.",
+  };
+
+  assert.deepEqual(namesFromConversation(transcript), ["Amos"]);
 });

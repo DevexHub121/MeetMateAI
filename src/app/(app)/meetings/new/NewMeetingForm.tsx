@@ -115,12 +115,22 @@ export function NewMeetingForm({
           body.set("ext", ext);
           body.set("chunk", file.slice(seq * chunkSize, Math.min(file.size, (seq + 1) * chunkSize)), `${meetingId}.${ext}`);
           let uploaded = false;
+          let uploadFailure = "";
           for (let attempt = 1; attempt <= 3 && !uploaded; attempt++) {
             const response = await fetch(`/api/recording/${meetingId}/parts`, { method: "POST", body });
             uploaded = response.ok;
-            if (!uploaded && attempt < 3) await new Promise((resolve) => setTimeout(resolve, attempt * 1000));
+            if (!uploaded) {
+              uploadFailure = `HTTP ${response.status}`;
+              if (attempt < 3) {
+                await new Promise((resolve) => setTimeout(resolve, attempt * 1000));
+              }
+            }
           }
-          if (!uploaded) throw new Error(`Chunk ${seq + 1} upload failed after 3 attempts`);
+          if (!uploaded) {
+            throw new Error(
+              `Chunk ${seq + 1} upload failed after 3 attempts (${uploadFailure})`,
+            );
+          }
         }
         setLargeUploadStatus("Processing recording…");
         await finalizeChunkedRecording(meetingId, partCount, ext, null);

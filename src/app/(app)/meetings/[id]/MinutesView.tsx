@@ -29,11 +29,11 @@ export function MinutesView({
         <div className="flex flex-wrap items-center gap-2.5">
           <span className="ai-chip">
             <SparkleIcon />
-            AI generated
+            {isDemo ? "Transcript only" : "AI generated"}
           </span>
           {isDemo && (
             <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/15 px-2.5 py-1 text-xs font-medium text-amber-300">
-              Demo minutes · add an OpenAI key for real analysis
+              Demo minutes · configure Ollama or OpenAI for real analysis
             </span>
           )}
         </div>
@@ -88,8 +88,9 @@ export function MinutesView({
             ))}
           </div>
           <p className="mt-2 text-xs text-[var(--color-text-muted)]">
-            Detected by AI from the conversation — people referred to by name,
-            not attendees.
+            {isDemo
+              ? "Basic transcript matching — people referred to by name, not attendees."
+              : "Detected by AI from the conversation — people referred to by name, not attendees."}
           </p>
         </Section>
       )}
@@ -104,13 +105,20 @@ export function MinutesView({
         </Section>
       )}
 
-      {minutes.keyPoints.length > 0 && (
+      {(minutes.keyPoints.length > 0 || isDemo) && (
         <Section title="Key points" delay={240}>
-          <ul className="list-disc space-y-1 pl-5 text-sm text-[var(--color-text-primary)]">
-            {minutes.keyPoints.map((k, i) => (
-              <li key={i}>{k}</li>
-            ))}
-          </ul>
+          {minutes.keyPoints.length > 0 ? (
+            <ul className="list-disc space-y-1 pl-5 text-sm text-[var(--color-text-primary)]">
+              {minutes.keyPoints.map((k, i) => (
+                <li key={i}>{k}</li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-[var(--color-text-secondary)]">
+              Topic analysis is unavailable in demo mode. Configure Ollama or
+              OpenAI and regenerate the minutes to analyze the transcript.
+            </p>
+          )}
         </Section>
       )}
 
@@ -130,17 +138,19 @@ export function MinutesView({
         </Section>
       )}
 
-      {!isClient && (
-      <Section title="Action items" delay={360}>
+      <Section title="Action items & ownership" delay={360}>
         {minutes.actionItems.length === 0 ? (
           <p className="text-sm text-[var(--color-text-secondary)]">
-            No action items recorded.
+            {isDemo
+              ? "Action-item analysis is unavailable in demo mode. Configure Ollama or OpenAI and regenerate the minutes to analyze the transcript."
+              : "No explicit follow-up tasks were identified in the transcript."}
           </p>
         ) : (
           <div className="overflow-hidden rounded-xl border border-[var(--color-border)]">
             <table className="w-full text-sm">
               <thead className="bg-[var(--color-muted-surface)]/50 text-left text-xs uppercase tracking-wide text-[var(--color-text-muted)]">
                 <tr>
+                  {isClient && <th className="px-4 py-2.5 font-medium">Side</th>}
                   <th className="px-4 py-2.5 font-medium">Owner</th>
                   <th className="px-4 py-2.5 font-medium">Task</th>
                   <th className="px-4 py-2.5 font-medium">Due</th>
@@ -149,6 +159,11 @@ export function MinutesView({
               <tbody className="divide-y divide-[var(--color-border)]">
                 {minutes.actionItems.map((item, i) => (
                   <tr key={i}>
+                    {isClient && (
+                      <td className="px-4 py-2.5 text-[var(--color-text-secondary)]">
+                        {actionSide(item.owner)}
+                      </td>
+                    )}
                     <td className="px-4 py-2.5 font-medium text-[var(--color-heading)]">
                       {item.owner}
                     </td>
@@ -165,7 +180,6 @@ export function MinutesView({
           </div>
         )}
       </Section>
-      )}
 
       {minutes.risks.length > 0 && (
         <Section title="Risks & open questions" delay={420}>
@@ -188,6 +202,12 @@ export function MinutesView({
       )}
     </div>
   );
+}
+
+function actionSide(owner: string): "Our team" | "Client" | "Unassigned" {
+  if (/^our team\b/i.test(owner)) return "Our team";
+  if (/^client\b/i.test(owner)) return "Client";
+  return "Unassigned";
 }
 
 function Section({

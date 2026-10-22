@@ -18,6 +18,14 @@ export async function POST(
     return NextResponse.json({ error: "Invalid recording chunk" }, { status: 400 });
   }
   const key = `recordings/${id}/part-${seq.padStart(5, "0")}.${ext}`;
-  await saveStoredPart(key, Buffer.from(await chunk.arrayBuffer()));
+  try {
+    await saveStoredPart(key, Buffer.from(await chunk.arrayBuffer()));
+  } catch (error) {
+    console.error(`[recording upload] failed to store part ${seq} for ${id}:`, error);
+    return NextResponse.json(
+      { error: "The server could not store this recording part." },
+      { status: 500 },
+    );
+  }
   return NextResponse.json({ ok: true, key });
 }

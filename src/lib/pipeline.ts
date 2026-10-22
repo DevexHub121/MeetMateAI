@@ -299,6 +299,8 @@ export async function processMeeting(meetingId: string) {
         roleLabels: [meeting.hostName, meeting.clientName],
         meetingDate: meeting.meetingDate,
         type: meeting.type,
+        hostName: meeting.hostName,
+        clientName: meeting.clientName,
       },
       meetingId,
     );

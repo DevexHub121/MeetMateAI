@@ -4,7 +4,11 @@ import type {
   ChatCompletionCreateParamsNonStreaming,
 } from "openai/resources/chat/completions";
 import { db } from "@/db";
-import { chunkTranscript, sampleTranscript } from "@/lib/transcriptChunks";
+import {
+  analyzeTranscriptChunks,
+  chunkTranscript,
+  sampleTranscript,
+} from "@/lib/transcriptChunks";
 import {
   aiUsage,
   type Invitee,
@@ -15,6 +19,7 @@ import {
 import { demoMinutes } from "@/lib/demoMinutes";
 import { distinctSpeakers } from "@/lib/speakers";
 import {
+  isLikelyPersonName,
   isNameEvidenced,
   mentionedOnly,
   resolveAttendees,
@@ -86,6 +91,103 @@ async function runChat(
   return completion;
 }
 
+type MinutesChatResult = {
+  content: string;
+};
+
+type OllamaChatResponse = {
+  model?: unknown;
+  message?: { content?: unknown };
+  prompt_eval_count?: unknown;
+  eval_count?: unknown;
+};
+
+type MinutesProvider = "ollama" | "openai" | "demo";
+
+function getMinutesProvider(): MinutesProvider {
+  const configured = process.env.MINUTES_PROVIDER?.trim().toLowerCase();
+  if (configured === "demo" || configured === "ollama" || configured === "openai") {
+    return configured;
+  }
+  if (configured) {
+    throw new Error(
+      `Unsupported MINUTES_PROVIDER "${configured}". Use "ollama", "openai", or "demo".`,
+    );
+  }
+  return process.env.OPENAI_API_KEY ? "openai" : "ollama";
+}
+
+async function runMinutesChat(
+  operation: string,
+  params: ChatCompletionCreateParamsNonStreaming,
+  meetingId?: string | null,
+): Promise<MinutesChatResult> {
+  if (getMinutesProvider() === "openai") {
+    const completion = await runChat(operation, params, meetingId);
+    const content = completion.choices[0]?.message?.content;
+    if (!content) throw new Error("OpenAI returned an empty response");
+    return { content };
+  }
+
+  const baseUrl = (
+    process.env.OLLAMA_BASE_URL ?? "http://127.0.0.1:11434"
+  ).replace(/\/+$/, "");
+  const model = process.env.OLLAMA_MODEL ?? "qwen2.5:7b";
+  let response: Response;
+  try {
+    response = await fetch(`${baseUrl}/api/chat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model,
+        messages: params.messages,
+        stream: false,
+        format: "json",
+        options: { temperature: 0 },
+      }),
+      signal: AbortSignal.timeout(10 * 60 * 1000),
+    });
+  } catch (error) {
+    throw new Error(
+      `Could not connect to Ollama at ${baseUrl}. Start Ollama and make sure the "${model}" model is installed.`,
+      { cause: error },
+    );
+  }
+
+  if (!response.ok) {
+    const details = await response.text();
+    throw new Error(
+      `Ollama minutes request failed (${response.status}): ${details || response.statusText}`,
+    );
+  }
+
+  const result = (await response.json()) as OllamaChatResponse;
+  const content = result.message?.content;
+  if (typeof content !== "string" || !content.trim()) {
+    throw new Error(`Ollama model "${model}" returned an empty response`);
+  }
+
+  const promptTokens =
+    typeof result.prompt_eval_count === "number" ? result.prompt_eval_count : 0;
+  const completionTokens =
+    typeof result.eval_count === "number" ? result.eval_count : 0;
+  try {
+    await db.insert(aiUsage).values({
+      meetingId: meetingId ?? null,
+      operation,
+      model: typeof result.model === "string" ? result.model : model,
+      promptTokens,
+      completionTokens,
+      totalTokens: promptTokens + completionTokens,
+      costUsd: 0,
+    });
+  } catch (error) {
+    console.error(`[ai_usage] failed to record usage for ${operation}:`, error);
+  }
+
+  return { content };
+}
+
 /**
  * How much transcript one call may carry.
  *
@@ -111,7 +213,7 @@ GROUNDING RULES — these outrank everything else below.
 
 The transcript is often MULTILINGUAL and code-switched — speakers mix English, Hindi (incl. Hinglish) and Punjabi within and across sentences, and some non-English stretches may be transcribed imperfectly. Understand all of it, use context to correct obvious mis-transcriptions, and ALWAYS write the minutes in clear, professional English regardless of the languages spoken (translate as needed). Preserve proper nouns (names, products, places) as spoken.
 
-When names are used in the conversation, map speakers to real names for attendees and action-item owners; otherwise use the speaker label. Action items must be concrete and explicitly stated; if no owner is named, use "Unassigned". Due dates only if explicitly mentioned (else null).
+When names are used in the conversation, map speakers to real names for attendees and action-item owners; otherwise use the speaker label. Action items answer "what did someone agree or get asked to do after this meeting?" Include only concrete future work explicitly committed, assigned, requested, or agreed. Do NOT turn a topic that was discussed, a suggestion, an unaccepted idea, completed work, a demo, a status update, a capability description, a past accomplishment, or praise into an action item. Keep the task specific to what was said; do not invent an owner, deliverable, or deadline. If no pending follow-up is clearly established, return an empty actionItems array. For client meetings, label each owner as either "Our team — <name>" or "Client — <name>" when the side is evident. Put our team's commitments first; include client-owned follow-ups only when they were explicitly agreed or requested. If the owner or side is not stated, use "Unassigned". Due dates only if explicitly mentioned (else null).
 
 Return STRICT JSON matching this TypeScript type:
 {
@@ -120,7 +222,7 @@ Return STRICT JSON matching this TypeScript type:
   "attendees": string[],        // who actually spoke, by name where known, else the speaker label
   "mentionedNames": string[],   // people NAMED in the conversation who were not speaking — those being talked about. Empty if none.
   "agenda": string[],           // topics actually discussed, in order (empty if none)
-  "keyPoints": string[],        // up to 8 notable discussion points (empty if none)
+  "keyPoints": string[],        // up to 8 major topics actually covered, each with its important update, concern, or outcome; keep separate from follow-up tasks (empty if none)
   "decisions": string[],        // concrete decisions actually made (empty if none)
   "actionItems": [ { "owner": string, "task": string, "due": string | null } ],
   "risks": string[],            // risks / blockers / open questions actually raised (empty if none)
@@ -132,7 +234,8 @@ const MAP_SYSTEM_PROMPT = `${MINUTES_SYSTEM_PROMPT}
 
 YOU ARE READING ONE PART OF A LONGER MEETING.
 - Extract only what THIS part actually supports. Do not describe the meeting as a whole, and do not speculate about what came before or after.
-- A later pass merges your output with the other parts, so do not compress or drop something because it seems minor, and do not worry about repeating what another part may also contain.
+- A later pass combines every part, so preserve the substantive topics, decisions, concerns, and explicit follow-ups from THIS part. Do not omit a topic just because it has no decision or action item; do not create an action item just because a topic was discussed.
+- "keyPoints" are the major topics covered in this part and their material updates or outcomes, not a list of tasks. "actionItems" are only specific work someone explicitly agreed, was assigned, or was asked to do after the meeting.
 - "summary" here means a factual account of what this part covered — not a conclusion about the meeting.
 - Omit "title" entirely; the merge decides it.`;
 
@@ -142,12 +245,17 @@ const REDUCE_SYSTEM_PROMPT = `You merge partial minutes taken from consecutive p
 GROUNDING RULES — these outrank everything else.
 1. Use ONLY what appears in the partials. Never add, infer, embellish, or fill a gap with what a meeting of this kind usually covers. The transcript is not available to you; the partials are all the evidence there is.
 2. DE-DUPLICATE. A meeting returns to the same topic, so the same decision, risk or action item often appears in several parts. Merge those into ONE entry, keeping the most specific wording, and the most specific owner and due date offered by any part.
-3. Keep chronological order — the partials are given in order.
-4. EMPTY IS A CORRECT ANSWER. If nothing across the partials supports a field, return an empty array. Do not pad.
-5. The lengths below are CEILINGS, NOT QUOTAS.
-6. Write in clear, professional English.
+3. Read and combine ALL parts before writing the final minutes. Do not let the first or last part dominate; use the entire meeting for topic coverage, decisions, and follow-ups.
+4. Keep chronological order — the partials are given in order.
+5. EMPTY IS A CORRECT ANSWER. If nothing across the partials supports a field, return an empty array. Do not pad.
+6. The lengths below are CEILINGS, NOT QUOTAS.
+7. Write in clear, professional English.
 
 The "summary" must describe the WHOLE meeting — beginning to end, in proportion — not just the first or last part.
+For "keyPoints", report the major distinct topics actually covered, each with its important update, concern, or outcome. Do not use this section as a task list, and do not drop a major topic just because no decision was made.
+For "actionItems", report only concrete future tasks explicitly agreed, assigned, or requested in the meeting. A discussion, suggestion, possibility, completed task, or status update is not a commitment. Combine duplicate references to the same follow-up across parts, but do not invent missing owners, deliverables, or due dates.
+
+For a client meeting, retain only explicit pending action items. Never turn completed work, a project walkthrough, status update, capability description, praise, idea, or discussion into a task. Keep our team's commitments before client-owned follow-ups, and preserve the ownership labels "Our team — <name>" and "Client — <name>" supplied by the partials.
 
 Return STRICT JSON matching this TypeScript type:
 {
@@ -156,7 +264,7 @@ Return STRICT JSON matching this TypeScript type:
   "attendees": string[],        // everyone who spoke, across all parts, de-duplicated
   "mentionedNames": string[],   // people NAMED but not speaking, de-duplicated. Empty if none.
   "agenda": string[],           // topics discussed, in order, de-duplicated
-  "keyPoints": string[],        // up to 10 notable points across the whole meeting
+  "keyPoints": string[],        // up to 10 major topics covered, each with its material update, concern, or outcome; not a task list
   "decisions": string[],        // concrete decisions actually made, de-duplicated
   "actionItems": [ { "owner": string, "task": string, "due": string | null } ],
   "risks": string[],            // risks / blockers / open questions raised
@@ -227,12 +335,14 @@ function heuristicSpeakerMap(
   invitees: Invitee[],
 ): SpeakerMap {
   const map: SpeakerMap = {};
-  const intro = /\b(?:i'?m|i am|this is|my name is)\s+([A-Z][a-z]{1,20})/i;
+  const intro =
+    /\b(?:[Ii]'?m|[Ii] am|[Tt]his is|[Mm]y name is)\s+([A-Z][a-z]{1,20})/;
   for (const u of transcript.utterances) {
     if (map[u.speaker]) continue;
     const m = u.text.match(intro);
     if (!m) continue;
     const raw = m[1];
+    if (!isLikelyPersonName(raw)) continue;
     const name = raw[0].toUpperCase() + raw.slice(1).toLowerCase();
     map[u.speaker] = { name, email: emailForName(name, invitees) };
   }
@@ -353,6 +463,12 @@ Return STRICT JSON of the form {"assignments": {"<speaker label>": "<name>"}} us
         continue;
       }
       const clean = name.trim();
+      if (!isLikelyPersonName(clean)) {
+        console.warn(
+          `[speakers] dropped "${clean}" for ${label} — it looks like common transcript wording, not a person's name`,
+        );
+        continue;
+      }
       // A name nobody said is a guess, not an identification. The prompt asks
       // for this; the check is what guarantees it. Leaving a speaker as
       // "Speaker 1" is recoverable from the dropdown — a confidently wrong name
@@ -392,8 +508,10 @@ async function minutesFromChunks(
   meeting: {
     title: string;
     participants: string | null;
-    meetingDate: Date | null;
+  meetingDate: Date | null;
     type?: "internal" | "client";
+    hostName?: string | null;
+    clientName?: string | null;
   },
   isClient: boolean,
   meetingId?: string | null,
@@ -403,41 +521,50 @@ async function minutesFromChunks(
     `Meeting type: ${isClient ? "CLIENT" : "INTERNAL"}`,
     meeting.participants ? `Stated participants: ${meeting.participants}` : "",
     meeting.meetingDate ? `Date: ${meeting.meetingDate.toISOString()}` : "",
+    isClient
+      ? `Action-item ownership: our team is ${meeting.hostName ?? "the host team"}; the client is ${meeting.clientName ?? "the client"}.`
+      : "",
   ]
     .filter(Boolean)
     .join("\n");
 
-  const partials = await Promise.all(
-    chunks.map(async (chunk, i) => {
-      const completion = await runChat(
-        "generate_minutes_part",
-        {
-          model: "gpt-4o",
-          temperature: 0,
-          response_format: { type: "json_object" },
-          messages: [
-            { role: "system", content: MAP_SYSTEM_PROMPT },
-            {
-              role: "user",
-              content: [
-                "METADATA (context only — never a source of content):",
-                metadata,
-                "",
-                `THIS IS PART ${i + 1} OF ${chunks.length}.`,
-                "",
-                "TRANSCRIPT OF THIS PART (the only source of content):",
-                chunk,
-              ].join("\n"),
-            },
-          ],
-        },
-        meetingId,
+  const partials = await analyzeTranscriptChunks(chunks, async (chunk, i) => {
+    const completion = await runMinutesChat(
+      "generate_minutes_part",
+      {
+        model: "gpt-4o",
+        temperature: 0,
+        response_format: { type: "json_object" },
+        messages: [
+          { role: "system", content: MAP_SYSTEM_PROMPT },
+          {
+            role: "user",
+            content: [
+              "METADATA (context only — never a source of content):",
+              metadata,
+              "",
+              `THIS IS PART ${i + 1} OF ${chunks.length}.`,
+              "",
+              "TRANSCRIPT OF THIS PART (the only source of content):",
+              chunk,
+            ].join("\n"),
+          },
+        ],
+      },
+      meetingId,
+    );
+    try {
+      JSON.parse(completion.content);
+    } catch (error) {
+      throw new Error(
+        "The minutes model returned invalid JSON for this transcript part",
+        { cause: error },
       );
-      return completion.choices[0]?.message?.content?.trim() || "{}";
-    }),
-  );
+    }
+    return completion.content;
+  });
 
-  const completion = await runChat(
+  const completion = await runMinutesChat(
     "merge_minutes",
     {
       model: "gpt-4o",
@@ -451,9 +578,6 @@ async function minutesFromChunks(
             "METADATA (context only — never a source of content):",
             metadata,
             "",
-            isClient
-              ? 'This is a CLIENT-facing meeting: return "actionItems" as an empty array [].'
-              : "",
             "",
             `PARTIAL MINUTES, IN ORDER (${partials.length} parts):`,
             ...partials.map((p, i) => `--- PART ${i + 1} ---\n${p}`),
@@ -466,10 +590,9 @@ async function minutesFromChunks(
     meetingId,
   );
 
-  const raw = completion.choices[0]?.message?.content;
+  const raw = completion.content;
   if (!raw) throw new Error("OpenAI returned an empty response");
   const minutes = JSON.parse(raw) as Minutes;
-  if (isClient) minutes.actionItems = [];
   // Defensive: the merge step is the one place a malformed array would reach the
   // database, because nothing downstream re-validates the shape.
   for (const key of [
@@ -495,6 +618,8 @@ export async function generateMinutes(
     participants: string | null;
     meetingDate: Date | null;
     type?: "internal" | "client";
+    hostName?: string | null;
+    clientName?: string | null;
     /** The invite list. Authoritative for who attended — see lib/attendees.ts. */
     participantNames?: string[];
     /**
@@ -509,19 +634,24 @@ export async function generateMinutes(
   meetingId?: string | null,
 ): Promise<Minutes> {
   const isClient = meeting.type === "client";
+  const provider = getMinutesProvider();
   const roleLabels = (meeting.roleLabels ?? []).filter(
     (l): l is string => typeof l === "string" && l.trim().length > 0,
   );
 
-  // No LLM key (or explicitly forced) → return key-free demo minutes so the
-  // rest of the pipeline still runs. Swaps to GPT-4o automatically once a key
-  // is set. Set MINUTES_PROVIDER=demo to force the fallback even with a key.
-  if (!process.env.OPENAI_API_KEY || process.env.MINUTES_PROVIDER === "demo") {
+  // Demo mode is opt-in. Prefer OpenAI when configured; otherwise use local
+  // Ollama so analysis remains available without an API key.
+  if (provider === "demo") {
     return withResolvedAttendees(
       demoMinutes(transcript, meeting),
       meeting.participantNames ?? [],
       roleLabels,
       transcript.fullText,
+    );
+  }
+  if (provider === "openai" && !process.env.OPENAI_API_KEY) {
+    throw new Error(
+      'MINUTES_PROVIDER is "openai", but OPENAI_API_KEY is not configured.',
     );
   }
 
@@ -559,7 +689,7 @@ export async function generateMinutes(
     `Meeting title: ${meeting.title}`,
     `Meeting type: ${isClient ? "CLIENT" : "INTERNAL"}`,
     isClient
-      ? "This is a CLIENT-facing meeting. Produce the summary and MoM (agenda, key points, decisions, risks, next steps) but DO NOT extract action items — return \"actionItems\" as an empty array []."
+      ? `Action-item ownership: our team is ${meeting.hostName ?? "the host team"}; the client is ${meeting.clientName ?? "the client"}. Include explicit action items for both sides, put our team's commitments first, and label owners "Our team — <name>" or "Client — <name>" when the side is evident.`
       : "",
     meeting.participants ? `Stated participants: ${meeting.participants}` : "",
     meeting.meetingDate ? `Date: ${meeting.meetingDate.toISOString()}` : "",
@@ -570,7 +700,7 @@ export async function generateMinutes(
     .filter(Boolean)
     .join("\n");
 
-  const completion = await runChat(
+  const completion = await runMinutesChat(
     "generate_minutes",
     {
       model: "gpt-4o",
@@ -585,11 +715,9 @@ export async function generateMinutes(
     },
     meetingId,
   );
-  const raw = completion.choices[0]?.message?.content;
+  const raw = completion.content;
   if (!raw) throw new Error("OpenAI returned an empty response");
   const minutes = JSON.parse(raw) as Minutes;
-  // Enforce the no-tasks rule for client meetings regardless of what the model returned.
-  if (isClient) minutes.actionItems = [];
   return withResolvedAttendees(
     minutes,
     meeting.participantNames ?? [],

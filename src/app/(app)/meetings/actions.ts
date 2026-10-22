@@ -375,11 +375,13 @@ export async function saveMeetingRecording(
       await db.update(meetings).set({ processingStage: "extracting", processingProgress: 0, processingTotal: 1 }).where(eq(meetings.id, meetingId));
       recordingSegments = await extractSpeechAudioSegments(saved.relativePath, meetingId);
       await db.update(meetings).set({ processingStage: "extracting", processingProgress: 1, processingTotal: 1 }).where(eq(meetings.id, meetingId));
-      recordingPath = recordingSegments[0]?.path ?? saved.relativePath;
+      // Keep the original file as the user-facing recording. The segments are
+      // only transcription inputs; pointing recordingPath at segment zero made
+      // an hour-long upload appear as a ten-minute recording in the player.
     } else {
       recordingPath = await extractSpeechAudio(saved.relativePath, meetingId);
+      await deleteStoredFile(saved.relativePath);
     }
-    await deleteStoredFile(saved.relativePath);
   } catch (err) {
     // Keep the existing fallback: an unusual container or an unavailable
     // local FFmpeg should not discard a user's recording.
@@ -513,11 +515,12 @@ export async function finalizeRecordingParts(
       await db.update(meetings).set({ processingStage: "extracting", processingProgress: 0, processingTotal: 1 }).where(eq(meetings.id, meetingId));
       recordingSegments = await extractSpeechAudioSegments(saved.relativePath, meetingId);
       await db.update(meetings).set({ processingStage: "extracting", processingProgress: 1, processingTotal: 1 }).where(eq(meetings.id, meetingId));
-      recordingPath = recordingSegments[0]?.path ?? saved.relativePath;
+      // Segments make long recordings practical to transcribe, but they must
+      // not replace the full recording used by playback and downloads.
     } else {
       recordingPath = await extractSpeechAudio(saved.relativePath, meetingId);
+      await deleteStoredFile(saved.relativePath);
     }
-    await deleteStoredFile(saved.relativePath);
   } catch (err) {
     console.warn("[media] live audio extraction failed; using original recording:", err);
   }
@@ -629,6 +632,8 @@ export async function regenerateMinutes(meetingId: string) {
         roleLabels: [meeting.hostName, meeting.clientName],
         meetingDate: meeting.meetingDate,
         type: meeting.type,
+        hostName: meeting.hostName,
+        clientName: meeting.clientName,
       },
       meetingId,
     );
