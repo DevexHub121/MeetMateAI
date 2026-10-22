@@ -203,7 +203,7 @@ export function MeetingFilters({
       </div>
 
       {active && (
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="mt-2 flex flex-wrap items-center gap-2">
           {draft.q && <Chip onClear={() => push({ q: "" })}>“{draft.q}”</Chip>}
           {draft.from && (
             <Chip onClear={() => push({ from: "" })}>From {draft.from}</Chip>
