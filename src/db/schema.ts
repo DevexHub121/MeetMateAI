@@ -316,6 +316,11 @@ export type SpeakerAssignment = {
 export type SpeakerMap = Record<string, SpeakerAssignment>;
 
 export type ActionItem = { owner: string; task: string; due: string | null };
+export type MeetingKeyMoment = {
+  timeSeconds: number;
+  topic: string;
+  priority: number;
+};
 export type Minutes = {
   title?: string; // short 3-6 word meeting title inferred from the discussion
   summary: string; // 3-5 sentence overview of the meeting
@@ -332,6 +337,8 @@ export type Minutes = {
   actionItems: ActionItem[]; // who owns what, and by when (due null if unstated)
   risks: string[]; // risks / blockers / open questions raised
   nextSteps: string[]; // follow-ups and next-meeting items
+  // Major topics with transcript offsets, used for direct playback navigation.
+  keyMoments?: MeetingKeyMoment[];
 };
 
 // MeetMate's identity and multi-tenant model lives alongside the meeting tables.

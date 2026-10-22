@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { Minutes } from "@/db/schema";
 import { createTasks } from "../actions";
+import { KeyMoments } from "./KeyMoments";
 
 export function MinutesView({
   minutes,
@@ -120,6 +121,10 @@ export function MinutesView({
             </p>
           )}
         </Section>
+      )}
+
+      {(minutes.keyMoments?.length ?? 0) > 0 && (
+        <KeyMoments moments={minutes.keyMoments ?? []} />
       )}
 
       {minutes.decisions.length > 0 && (

@@ -45,6 +45,8 @@ analysis intentionally.
 Long transcripts are split at speaker-turn boundaries. MeetMate analyzes each
 chunk sequentially, stops with an error identifying the failed chunk if any
 analysis fails, and only then merges the chunk results into final minutes.
+The minutes also include prioritized key moments with transcript timestamps;
+select a timestamp to seek the recording to that discussion.
 
 ## Auth model
 

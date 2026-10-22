@@ -57,5 +57,6 @@ export function demoMinutes(
     actionItems,
     risks: [],
     nextSteps: [],
+    keyMoments: [],
   };
 }

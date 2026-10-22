@@ -13,6 +13,7 @@ import assert from "node:assert/strict";
 import {
   analyzeTranscriptChunks,
   chunkTranscript,
+  chunkTranscriptWithTimestamps,
   sampleTranscript,
   ELISION,
 } from "../src/lib/transcriptChunks.ts";
@@ -52,6 +53,20 @@ test("a short transcript stays a single chunk", () => {
   const chunks = chunkTranscript(t, 45000);
   assert.equal(chunks.length, 1);
   assert.equal(chunks[0], t.fullText);
+});
+
+test("timestamped chunks preserve utterance times across all parts", () => {
+  const t = transcript([
+    ["Speaker 0", "Opening topic"],
+    ["Speaker 1", "Second topic"],
+    ["Speaker 0", "Closing topic"],
+  ]);
+  const chunks = chunkTranscriptWithTimestamps(t, 36);
+
+  assert.ok(chunks.length > 1);
+  assert.match(chunks.join("\n"), /\[0\.00s\] Speaker 0: Opening topic/);
+  assert.match(chunks.join("\n"), /\[10\.00s\] Speaker 1: Second topic/);
+  assert.match(chunks.join("\n"), /\[20\.00s\] Speaker 0: Closing topic/);
 });
 
 test("an empty transcript yields no chunks", () => {

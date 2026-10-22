@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { RECORDING_SEEK_EVENT } from "./recordingSeek";
 
 const SPEEDS = [1, 1.25, 1.5, 2];
 
@@ -28,6 +29,7 @@ export function AudioPlayer({
   fallbackDuration?: string | null;
 }) {
   const ref = useRef<HTMLAudioElement>(null);
+  const playerRef = useRef<HTMLDivElement>(null);
   const [playing, setPlaying] = useState(false);
   const [current, setCurrent] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -53,6 +55,21 @@ export function AudioPlayer({
     const onPause = () => setPlaying(false);
     const onEnded = () => setPlaying(false);
     const onError = () => setFailed(true);
+    const onRecordingSeek = (event: Event) => {
+      const timeSeconds = (event as CustomEvent<{ timeSeconds?: number }>).detail
+        ?.timeSeconds;
+      if (typeof timeSeconds !== "number" || !Number.isFinite(timeSeconds)) return;
+      const seek = () => {
+        const duration = el.duration;
+        el.currentTime =
+          Number.isFinite(duration) && duration > 0
+            ? Math.min(timeSeconds, duration)
+            : timeSeconds;
+        playerRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      };
+      if (el.readyState >= 1) seek();
+      else el.addEventListener("loadedmetadata", seek, { once: true });
+    };
     el.addEventListener("timeupdate", onTime);
     el.addEventListener("loadedmetadata", onMeta);
     el.addEventListener("durationchange", onMeta);
@@ -60,6 +77,7 @@ export function AudioPlayer({
     el.addEventListener("pause", onPause);
     el.addEventListener("ended", onEnded);
     el.addEventListener("error", onError);
+    window.addEventListener(RECORDING_SEEK_EVENT, onRecordingSeek);
     return () => {
       el.removeEventListener("timeupdate", onTime);
       el.removeEventListener("loadedmetadata", onMeta);
@@ -68,6 +86,7 @@ export function AudioPlayer({
       el.removeEventListener("pause", onPause);
       el.removeEventListener("ended", onEnded);
       el.removeEventListener("error", onError);
+      window.removeEventListener(RECORDING_SEEK_EVENT, onRecordingSeek);
     };
   }, []);
 
@@ -94,7 +113,10 @@ export function AudioPlayer({
   const progress = total > 0 ? (current / total) * 100 : 0;
 
   return (
-    <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-muted-surface)] px-4 py-3">
+    <div
+      ref={playerRef}
+      className="rounded-xl border border-[var(--color-border)] bg-[var(--color-muted-surface)] px-4 py-3"
+    >
       <audio ref={ref} src={src} preload="metadata" className="hidden" />
 
       {failed ? (

@@ -464,7 +464,6 @@ export function MeetingRecorder({
       return;
     }
 
-    setStatus("idle");
     // Same page — refresh the server component to reveal the processing /
     // minutes view (the recording kicks off background transcription).
     router.push(`/meetings/${meetingId}`);
