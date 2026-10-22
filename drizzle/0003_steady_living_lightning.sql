@@ -1,1 +1,1 @@
-ALTER TABLE "meetings" ADD COLUMN "recording_segments" jsonb;
+ALTER TABLE "meetings" ADD COLUMN IF NOT EXISTS "recording_segments" jsonb;
