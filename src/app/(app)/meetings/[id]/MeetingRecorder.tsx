@@ -1598,7 +1598,7 @@ function RecordAction({
         )}
         <button
           onClick={onRetrySave}
-          className="inline-flex items-center gap-2 rounded-full bg-[var(--color-bg-2)] px-5 py-2.5 text-sm font-semibold text-[#181818] shadow-sm transition-colors hover:bg-white"
+          className="inline-flex items-center gap-2 rounded-full bg-[var(--color-bg-2)] px-5 py-2.5 text-sm font-semibold text-[var(--color-on-bg-2)] shadow-sm transition-colors hover:bg-white"
         >
           <span className="h-2.5 w-2.5 rounded-full bg-current" />
           Retry save
@@ -1635,7 +1635,7 @@ function RecordAction({
     return (
       <button
         disabled
-        className="inline-flex cursor-not-allowed items-center gap-2 rounded-full bg-[var(--color-bg-2)] px-5 py-2.5 text-sm font-semibold text-[#181818] opacity-70"
+        className="inline-flex cursor-not-allowed items-center gap-2 rounded-full bg-[var(--color-bg-2)] px-5 py-2.5 text-sm font-semibold text-[var(--color-on-bg-2)] opacity-70"
       >
         <Spinner />
         Starting…
@@ -1647,7 +1647,7 @@ function RecordAction({
   return (
     <button
       onClick={onStart}
-      className="inline-flex items-center gap-2 rounded-full bg-[var(--color-bg-2)] px-5 py-2.5 text-sm font-semibold text-[#181818] shadow-sm transition-colors hover:bg-white"
+      className="inline-flex items-center gap-2 rounded-full bg-[var(--color-bg-2)] px-5 py-2.5 text-sm font-semibold text-[var(--color-on-bg-2)] shadow-sm transition-colors hover:bg-[var(--color-bg-2)]"
     >
       <span className="h-2.5 w-2.5 rounded-full bg-current" />
       {/* Not "Start meeting": starting a meeting is what the note-taker card
