@@ -67,6 +67,7 @@ export const CLEARED_BY_NEW_RECORDING = {
   speakerMap: null,
   minutes: null,
   recordingSegments: null,
+  videoPath: null,
   error: null,
 } as const;
 

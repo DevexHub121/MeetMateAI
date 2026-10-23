@@ -25,6 +25,12 @@ database. No shared SSO.
    ```
 3. `npm install && npm run dev`
 
+## Meeting folders
+
+Organization members can create shared folders from the Meetings page, filter
+the list by folder, and move meetings between folders or back to Unfiled. Apply
+database changes with `npm run db:migrate` when deploying.
+
 ## Meeting minutes model
 
 Minutes use OpenAI automatically when `OPENAI_API_KEY` is configured. Without
@@ -45,7 +51,7 @@ analysis intentionally.
 Long transcripts are split at speaker-turn boundaries. MeetMate analyzes each
 chunk sequentially, stops with an error identifying the failed chunk if any
 analysis fails, and only then merges the chunk results into final minutes.
-The minutes also include prioritized key moments with transcript timestamps;
+The minutes also include prioritized  with transcript timestamps;
 select a timestamp to seek the recording to that discussion.
 
 ## Auth model

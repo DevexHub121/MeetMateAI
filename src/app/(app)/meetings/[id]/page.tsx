@@ -25,6 +25,7 @@ import { StartMeeting } from "./StartMeeting";
 import { StopNoteTaker } from "./StopNoteTaker";
 import { DeviceRecording } from "./DeviceRecording";
 import { MinutesView } from "./MinutesView";
+import { MeetingChat } from "./MeetingChat";
 import { SpeakerMapping } from "./SpeakerMapping";
 import { VoiceIdentify } from "./VoiceIdentify";
 import { hasVoiceWindows } from "../voiceActions";
@@ -114,15 +115,12 @@ export default async function MeetingPage({
   // it stays where it is.
   const canSendNoteTaker = recallEnabled() && !hasRecording && !botActive;
 
-  // Whether to offer the video tab. Only meetings a bot attended have one —
-  // a phone or browser recording is audio and nothing else.
-  //
-  // This is deliberately "a bot recorded this", not "a video exists": knowing
-  // the latter means a round-trip to Recall, and paying for that on every
-  // render of every completed meeting to grey out one tab is a bad trade. The
-  // player handles the miss when it happens.
+  // Uploaded videos are stored with the meeting; bot-captured video remains
+  // available on demand from Recall.
   const session = await botSession;
-  const hasVideo = hasRecording && recallEnabled() && Boolean(session);
+  const hasUploadedVideo = Boolean(meeting.videoPath);
+  const hasRecallVideo = hasRecording && recallEnabled() && Boolean(session);
+  const hasVideo = hasUploadedVideo || hasRecallVideo;
 
   // Resolve the presigned video URL now, without waiting for it.
   //
@@ -132,7 +130,7 @@ export default async function MeetingPage({
   // a URL that is already there. Not awaited, so it adds nothing to this render,
   // and cached for six hours per bot, so it is at most one call per bot per
   // afternoon rather than one per page view.
-  if (hasVideo && session) void warmVideoUrl(session.botId);
+  if (!hasUploadedVideo && hasRecallVideo && session) void warmVideoUrl(session.botId);
 
   // Speaker mapping is available once we have a transcript. Offer this meeting's
   // participants (invitees) to map speakers to — NOT the whole employee
@@ -188,6 +186,12 @@ export default async function MeetingPage({
   const hasTranscript = Boolean(
     transcript?.utterances?.length || transcript?.fullText?.trim(),
   );
+  const transcriptWordCount = transcript?.fullText.trim()
+    ? transcript.fullText.trim().split(/\s+/).length
+    : 0;
+  const displaySpeakers = transcript
+    ? distinctSpeakers(transcript).map((speaker) => speaker.label)
+    : [];
 
   // People can be added right up until the minutes are written, which is the
   // moment the list stops being a guest list and starts being a record. That
@@ -211,13 +215,16 @@ export default async function MeetingPage({
       id: "minutes",
       label: "Minutes",
       content: (
-        <MinutesView
-          minutes={meeting.minutes}
-          title={meeting.title}
-          meetingId={id}
-          tasksSent={Boolean(meeting.tasksSentAt)}
-          isClient={meeting.type === "client"}
-        />
+        <div className="space-y-6">
+          <MinutesView
+            minutes={meeting.minutes}
+            title={meeting.title}
+            meetingId={id}
+            tasksSent={Boolean(meeting.tasksSentAt)}
+            isClient={meeting.type === "client"}
+          />
+          {hasTranscript && <MeetingChat meetingId={id} />}
+        </div>
       ),
     });
   }
@@ -263,7 +270,7 @@ export default async function MeetingPage({
   }
 
   return (
-    <div className="mx-auto max-w-4xl">
+    <div className="mx-auto max-w-6xl">
       <Link
         href="/meetings"
         className="mb-4 inline-block text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-heading)]"
@@ -442,49 +449,148 @@ export default async function MeetingPage({
           ) : (
             <RecordingSlotView meetingId={id} meetingType={meeting.type} />
           )}
-          <AudioImport meetingId={id} />
+        </div>
+      )}
+      {(!hasRecording || processing) && (
+        <div className={hasRecording ? "mb-6" : ""}>
+          <AudioImport
+            meetingId={id}
+            processing={processing}
+            status={meeting.status}
+            stage={meeting.processingStage}
+          />
         </div>
       )}
 
       {/* Recording exists → audio player + processing / minutes / error. */}
       {hasRecording && (
         <div className="space-y-6">
-          <div className="card p-5">
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <div className="flex items-baseline gap-2.5">
-                <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
-                  Recording
-                </h2>
-                {meeting.durationSeconds && (
-                  <span className="text-xs text-[var(--color-text-muted)]">
-                    {formatDuration(meeting.durationSeconds)}
+          <div className="overflow-hidden rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-xl shadow-black/10">
+            <div className="grid lg:grid-cols-[minmax(0,1.7fr)_minmax(280px,0.8fr)]">
+              <section className="min-w-0 p-4 sm:p-6">
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--color-text-muted)]">
+                      Meeting recording
+                    </p>
+                    <h2 className="mt-1 text-lg font-semibold text-[var(--color-heading)]">
+                      {hasVideo ? "Video & audio" : "Audio recording"}
+                    </h2>
+                  </div>
+                  <a
+                    href={`/api/recording/${id}?download=1`}
+                    download
+                    className="btn-secondary shrink-0 px-3 py-1.5 text-sm"
+                  >
+                    <DownloadIcon />
+                    Download audio
+                  </a>
+                </div>
+                <RecordingMedia
+                  key={meeting.videoPath ?? "recall-or-audio"}
+                  audioSrc={`/api/recording/${id}`}
+                  videoSrc={hasVideo ? `/api/recording/${id}/video` : undefined}
+                  preferVideo={hasUploadedVideo}
+                  fallbackDuration={meeting.durationSeconds}
+                />
+              </section>
+
+              <aside className="border-t border-[var(--color-border)] bg-[var(--color-muted-surface)]/70 p-5 sm:p-6 lg:border-l lg:border-t-0">
+                <div className="flex items-center justify-between gap-3">
+                  <h2 className="text-sm font-semibold text-[var(--color-heading)]">
+                    Meeting overview
+                  </h2>
+                  <span className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)]">
+                    {meeting.status === "completed" ? "Recap ready" : "Processing"}
                   </span>
+                </div>
+
+                <div className="mt-4 grid grid-cols-2 gap-2">
+                  <OverviewMetric
+                    label="Duration"
+                    value={meeting.durationSeconds ? formatDuration(meeting.durationSeconds) : "—"}
+                  />
+                  <OverviewMetric
+                    label="Transcript"
+                    value={transcriptWordCount ? `${transcriptWordCount.toLocaleString()} words` : "—"}
+                  />
+                </div>
+
+                {meeting.minutes?.summary && (
+                  <div className="mt-5">
+                    <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
+                      Summary
+                    </h3>
+                    <p className="mt-2 line-clamp-6 text-sm leading-relaxed text-[var(--color-text-primary)]">
+                      {meeting.minutes.summary.replace(/^⚠️ Demo minutes[^\n]*\n*/u, "")}
+                    </p>
+                  </div>
                 )}
-              </div>
-              {/* Same route as the player, with ?download=1 flipping the
-                  Content-Disposition to attachment. `download` alone wouldn't
-                  do it — the attribute is ignored on responses the browser
-                  can play inline. */}
-              <a
-                href={`/api/recording/${id}?download=1`}
-                download
-                className="btn-secondary shrink-0 px-3 py-1.5 text-sm"
-              >
-                <DownloadIcon />
-                Download audio
-              </a>
+
+                {displaySpeakers.length > 0 && (
+                  <div className="mt-5">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
+                        Speakers
+                      </h3>
+                      <span className="text-xs text-[var(--color-text-muted)]">
+                        {displaySpeakers.length}
+                      </span>
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {displaySpeakers.slice(0, 6).map((speaker, index) => (
+                        <span
+                          key={`${speaker}-${index}`}
+                          className="inline-flex max-w-full items-center gap-2 rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-1.5 text-xs text-[var(--color-text-secondary)]"
+                        >
+                          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-violet-400" />
+                          <span className="truncate">{speaker}</span>
+                        </span>
+                      ))}
+                      {displaySpeakers.length > 6 && (
+                        <span className="px-1 py-1.5 text-xs text-[var(--color-text-muted)]">
+                          +{displaySpeakers.length - 6} more
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {(meeting.minutes?.keyPoints.length ?? 0) > 0 && (
+                  <div className="mt-5">
+                    <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
+                      Key takeaways
+                    </h3>
+                    <ul className="mt-2 space-y-2">
+                      {meeting.minutes?.keyPoints.slice(0, 3).map((point, index) => (
+                        <li key={index} className="flex gap-2 text-sm leading-relaxed text-[var(--color-text-primary)]">
+                          <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-cyan-400" />
+                          <span className="line-clamp-2">{point}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {!meeting.minutes && (
+                  <p className="mt-5 text-sm leading-relaxed text-[var(--color-text-muted)]">
+                    The meeting summary and insights will appear here when analysis is complete.
+                  </p>
+                )}
+              </aside>
             </div>
-            <RecordingMedia
-              audioSrc={`/api/recording/${id}`}
-              videoSrc={hasVideo ? `/api/recording/${id}/video` : undefined}
-              fallbackDuration={meeting.durationSeconds}
-            />
+            <div className="grid grid-cols-2 divide-x divide-[var(--color-border)] border-t border-[var(--color-border)] sm:grid-cols-4">
+              <OverviewStat label="Participants" value={String(invitees.length || displaySpeakers.length || 0)} />
+              <OverviewStat label="Transcript words" value={transcriptWordCount.toLocaleString()} />
+              <OverviewStat label="Decisions" value={String(meeting.minutes?.decisions.length ?? 0)} />
+              <OverviewStat label="Action items" value={String(meeting.minutes?.actionItems.length ?? 0)} />
+            </div>
           </div>
 
           {processing && (
             <>
               <AutoRefresh />
-              <AIPipeline status={meeting.status} stage={meeting.processingStage} progress={meeting.processingProgress} total={meeting.processingTotal} />
+              <AIPipeline meetingId={id} status={meeting.status} stage={meeting.processingStage} progress={meeting.processingProgress} total={meeting.processingTotal} />
               {/* Offered unconditionally rather than after some timeout,
                   because nothing on the row records when processing began —
                   and a quiet link costs a reader nothing while the pipeline is
@@ -550,4 +656,30 @@ function formatDuration(seconds: string): string {
   const m = Math.floor(s / 60);
   const sec = Math.floor(s % 60);
   return `${m}:${String(sec).padStart(2, "0")}`;
+}
+
+function OverviewMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-3">
+      <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
+        {label}
+      </p>
+      <p className="mt-1 truncate text-sm font-semibold text-[var(--color-heading)]">
+        {value}
+      </p>
+    </div>
+  );
+}
+
+function OverviewStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="px-4 py-3 text-center sm:px-5">
+      <p className="text-lg font-semibold tabular-nums text-[var(--color-heading)]">
+        {value}
+      </p>
+      <p className="mt-0.5 text-[10px] font-medium uppercase tracking-wide text-[var(--color-text-muted)]">
+        {label}
+      </p>
+    </div>
+  );
 }

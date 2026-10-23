@@ -2,17 +2,18 @@
 
 import { useMemo, useState } from "react";
 import type { TranscriptResult } from "@/db/schema";
+import { seekRecording } from "./recordingSeek";
 
 // A fixed palette so a given speaker keeps the same accent for the whole
 // transcript. Index-based rather than hash-based: adjacent speakers should be
 // easy to tell apart, which a hash can't guarantee.
 const SPEAKER_COLORS = [
-  { dot: "bg-violet-400", text: "text-violet-300" },
-  { dot: "bg-cyan-400", text: "text-cyan-300" },
-  { dot: "bg-emerald-400", text: "text-emerald-300" },
-  { dot: "bg-amber-400", text: "text-amber-300" },
-  { dot: "bg-rose-400", text: "text-rose-300" },
-  { dot: "bg-sky-400", text: "text-sky-300" },
+  { dot: "bg-violet-400", text: "text-violet-300", edge: "border-l-violet-400" },
+  { dot: "bg-cyan-400", text: "text-cyan-300", edge: "border-l-cyan-400" },
+  { dot: "bg-emerald-400", text: "text-emerald-300", edge: "border-l-emerald-400" },
+  { dot: "bg-amber-400", text: "text-amber-300", edge: "border-l-amber-400" },
+  { dot: "bg-rose-400", text: "text-rose-300", edge: "border-l-rose-400" },
+  { dot: "bg-sky-400", text: "text-sky-300", edge: "border-l-sky-400" },
 ];
 
 function timecode(seconds: number): string {
@@ -76,7 +77,6 @@ export function TranscriptView({
     return (speaker: string) =>
       SPEAKER_COLORS[(order.get(speaker) ?? 0) % SPEAKER_COLORS.length];
   }, [turns]);
-
   const needle = query.trim().toLowerCase();
   const matches = useMemo(
     () =>
@@ -142,29 +142,43 @@ export function TranscriptView({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-xs text-[var(--color-text-muted)]">
-          {turns.length} turn{turns.length === 1 ? "" : "s"} ·{" "}
-          {wordCount.toLocaleString()} words
-        </p>
+      <header className="flex flex-col gap-4 border-b border-[var(--color-border)] pb-5 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--color-text-muted)]">
+            Meeting record
+          </p>
+          <h2 className="mt-1 text-xl font-semibold tracking-tight text-[var(--color-heading)]">
+            Transcript
+          </h2>
+          <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
+            {turns.length.toLocaleString()} speaking turns
+            <span className="mx-2 text-[var(--color-text-muted)]">·</span>
+            {wordCount.toLocaleString()} words
+          </p>
+        </div>
         <div className="flex items-center gap-2">
           <button onClick={copy} className="btn-secondary px-3 py-1.5 text-sm">
-            {copied ? "Copied ✓" : "Copy"}
+            {copied ? "Copied ✓" : "Copy transcript"}
           </button>
           <button onClick={download} className="btn-secondary px-3 py-1.5 text-sm">
-            Download .txt
+            Download
           </button>
         </div>
-      </div>
+      </header>
 
-      <div className="relative">
-        <SearchIcon />
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search the transcript…"
-          className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-elevated)] py-2 pl-9 pr-3 text-sm text-[var(--color-heading)] outline-none transition-colors placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-border-strong)] focus:ring-1 focus:ring-[var(--color-border-strong)]"
-        />
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="relative min-w-0 flex-1">
+          <SearchIcon />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search by words or speaker…"
+            className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-muted-surface)] py-2.5 pl-9 pr-3 text-sm text-[var(--color-heading)] outline-none transition-colors placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-border-strong)] focus:ring-1 focus:ring-[var(--color-border-strong)]"
+          />
+        </div>
+        <p className="shrink-0 text-xs text-[var(--color-text-muted)]">
+          Select a timestamp to play from that moment
+        </p>
       </div>
 
       {needle && (
@@ -175,26 +189,33 @@ export function TranscriptView({
         </p>
       )}
 
-      <div className="space-y-3">
+      <div className="max-h-[70vh] overflow-y-auto rounded-2xl border border-[var(--color-border)] bg-[var(--color-muted-surface)]/40 px-3 py-2 sm:px-5">
         {visible.map((t, i) => {
           const c = colorOf(t.speaker);
           return (
             <div
               key={`${t.start}-${i}`}
-              className="rounded-xl border border-[var(--color-border)] bg-[var(--color-muted-surface)] p-3.5"
+              className="grid grid-cols-[4.25rem_minmax(0,1fr)] gap-3 border-b border-[var(--color-border)] py-4 last:border-b-0 sm:grid-cols-[5.5rem_minmax(0,1fr)] sm:gap-5"
             >
-              <div className="mb-1.5 flex items-baseline gap-2">
-                <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${c.dot}`} />
-                <span className={`text-xs font-semibold ${c.text}`}>
-                  {t.speaker}
-                </span>
-                <span className="ml-auto shrink-0 font-mono text-[11px] text-[var(--color-text-muted)]">
-                  {timecode(t.start)}
-                </span>
-              </div>
-              <p className="text-sm leading-relaxed text-[var(--color-text-primary)]">
-                <Highlight text={t.text} needle={needle} />
-              </p>
+              <button
+                type="button"
+                onClick={() => seekRecording(t.start)}
+                aria-label={`Play from ${timecode(t.start)}`}
+                className="mt-0.5 h-fit rounded-lg px-1 py-1 text-left font-mono text-xs tabular-nums text-[var(--color-text-muted)] transition hover:bg-[var(--color-elevated)] hover:text-[var(--color-heading)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-border-strong)]"
+              >
+                {timecode(t.start)}
+              </button>
+              <article className="min-w-0">
+                <header className="mb-1.5 flex items-center gap-2">
+                  <span className={`h-2 w-2 shrink-0 rounded-full ${c.dot}`} />
+                  <span className={`truncate text-xs font-semibold ${c.text}`}>
+                    {t.speaker}
+                  </span>
+                </header>
+                <p className="whitespace-pre-wrap text-sm leading-7 text-[var(--color-text-primary)] sm:text-[15px]">
+                  <Highlight text={t.text} needle={needle} />
+                </p>
+              </article>
             </div>
           );
         })}

@@ -1,4 +1,8 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import type { MeetingStatus } from "@/db/schema";
+import { processingStartKey } from "./processingTimer";
 
 // The agentic view of what MeetMate is doing while it turns a recording into
 // minutes. Instead of a single opaque spinner, we surface the pipeline as
@@ -38,8 +42,25 @@ function activeStage(status: MeetingStatus, stage?: string | null): number {
   }
 }
 
-export function AIPipeline({ status, stage, progress, total }: { status: MeetingStatus; stage?: string | null; progress?: number; total?: number }) {
+export function AIPipeline({ meetingId, status, stage, progress, total }: { meetingId: string; status: MeetingStatus; stage?: string | null; progress?: number; total?: number }) {
   const active = activeStage(status, stage);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+
+  useEffect(() => {
+    const key = processingStartKey(meetingId);
+    let startedAt = Date.now();
+    try {
+      const stored = Number(sessionStorage.getItem(key));
+      if (Number.isFinite(stored) && stored > 0) startedAt = stored;
+      else sessionStorage.setItem(key, String(startedAt));
+    } catch {
+      // Timer can still run for this page view without session storage.
+    }
+    const update = () => setElapsedSeconds(Math.floor((Date.now() - startedAt) / 1000));
+    update();
+    const timer = window.setInterval(update, 1000);
+    return () => window.clearInterval(timer);
+  }, [meetingId]);
 
   return (
     <div className="ai-border ai-glow card overflow-hidden p-6">
@@ -59,7 +80,8 @@ export function AIPipeline({ status, stage, progress, total }: { status: Meeting
             MeetMate is generating your minutes
           </p>
           <p className="mt-0.5 text-xs text-[var(--color-text-muted)]">
-            {progress && total ? `${progress} of ${total} complete` : "Updates live while processing."}
+            {progress && total ? `${progress} of ${total} complete · ` : ""}
+            Elapsed {formatElapsed(elapsedSeconds)}
           </p>
         </div>
       </div>
@@ -114,6 +136,16 @@ export function AIPipeline({ status, stage, progress, total }: { status: Meeting
       </ol>
     </div>
   );
+}
+
+function formatElapsed(seconds: number): string {
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const remaining = seconds % 60;
+  if (hours > 0) {
+    return `${hours}:${String(minutes).padStart(2, "0")}:${String(remaining).padStart(2, "0")}`;
+  }
+  return `${minutes}:${String(remaining).padStart(2, "0")}`;
 }
 
 function StageNode({ state }: { state: "done" | "active" | "pending" }) {

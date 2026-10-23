@@ -1,49 +1,109 @@
 import { canViewMeeting, getMeeting } from "@/lib/meetings";
+import { createPresignedGet, localStoredFilePath } from "@/lib/storage";
 import { getCurrentUser } from "@/lib/auth";
 import { latestBotSession } from "@/lib/botStatus";
 import { recallEnabled, videoUrlForBot } from "@/lib/recall";
+import { createReadStream } from "fs";
+import { stat } from "fs/promises";
+import { Readable } from "stream";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-/**
- * The note-taker's video, for meetings a bot recorded.
- *
- * MeetMate deliberately stores only the audio: an hour of mixed video is ~140 MB
- * against ~15 MB for the MP3, the pipeline never looks at the picture, and
- * reading a file that size into a Buffer is what got a worker OOM-killed and
- * left a meeting stuck for twelve hours. Keeping a second copy of every meeting
- * purely so it can be watched occasionally would multiply the storage bill by
- * ten to earn that back. Recall already holds it, under `retention: forever`,
- * on S3.
- *
- * So the bytes come from Recall on demand. This route streams them through
- * rather than redirecting to the presigned URL, which is worth the bandwidth
- * for two reasons found by measuring the real thing:
- *
- *   - Recall's S3 objects are served as `binary/octet-stream`, not `video/mp4`.
- *     Firefox and Safari refuse to decode a media element whose Content-Type
- *     isn't a video type, so a redirect plays in Chrome and silently fails
- *     elsewhere. The URL is a v2 presigned link (AWSAccessKeyId/Signature/
- *     Expires), and adding `response-content-type` invalidates the signature —
- *     verified, it 403s. Overriding the header on the way past is the only fix.
- *   - A redirect hands the browser a URL that reaches the bytes without an MeetMate
- *     session until it expires. Streaming keeps the presigned URL server-side,
- *     so access stays tied to the session on every request.
- *
- * Nothing is buffered: the upstream body is piped straight to the client, so
- * memory stays flat regardless of file size — the OOM above came from
- * materialising a Buffer, which is exactly what this avoids. Range headers are
- * forwarded and 206 responses passed through intact, so seeking in a long
- * recording works properly. (The sibling audio route can't do that: it
- * materialises the whole file and advertises Accept-Ranges without honouring
- * Range, which is survivable for a 15 MB MP3 and would be miserable here.)
- *
- * The tradeoff to know about: this depends on Recall's retention staying
- * generous. Videos are not ours, and if that setting ever changes they go away
- * without MeetMate noticing. The audio, transcript and minutes are all ours and are
- * unaffected.
- */
+const VIDEO_TYPES: Record<string, string> = {
+  avi: "video/x-msvideo",
+  m4v: "video/mp4",
+  mkv: "video/x-matroska",
+  mov: "video/quicktime",
+  mp4: "video/mp4",
+  ogv: "video/ogg",
+  webm: "video/webm",
+};
+
+async function serveUploadedVideo(req: Request, path: string): Promise<Response> {
+  const ext = path.split(".").pop()?.toLowerCase() ?? "";
+  const contentType = VIDEO_TYPES[ext] ?? "application/octet-stream";
+  const range = req.headers.get("range");
+  const signed = await createPresignedGet(path, 900);
+
+  if (signed) {
+    let upstream: Response;
+    try {
+      upstream = await fetch(signed, {
+        headers: range ? { Range: range } : {},
+        signal: req.signal,
+        cache: "no-store",
+      });
+    } catch (err) {
+      if (req.signal.aborted) return new Response(null, { status: 499 });
+      console.warn("[storage] uploaded video fetch failed:", err);
+      return new Response("Video is unavailable right now", { status: 502 });
+    }
+    if (!upstream.ok || !upstream.body) {
+      return new Response("Video is unavailable right now", { status: 502 });
+    }
+    const headers = new Headers({
+      "Content-Type": contentType,
+      "Accept-Ranges": "bytes",
+      "Cache-Control": "private, no-store",
+    });
+    for (const name of ["content-length", "content-range"]) {
+      const value = upstream.headers.get(name);
+      if (value) headers.set(name, value);
+    }
+    return new Response(upstream.body, { status: upstream.status, headers });
+  }
+
+  const localPath = localStoredFilePath(path);
+  if (!localPath) return new Response("Not found", { status: 404 });
+
+  try {
+    const { size } = await stat(localPath);
+    let start = 0;
+    let end = size - 1;
+    let status = 200;
+    if (range) {
+      const match = /^bytes=(\d*)-(\d*)$/.exec(range);
+      if (!match || size === 0 || (!match[1] && !match[2])) {
+        return new Response(null, {
+          status: 416,
+          headers: { "Content-Range": `bytes */${size}` },
+        });
+      }
+      if (match[1]) {
+        start = Number(match[1]);
+        if (match[2]) end = Math.min(Number(match[2]), end);
+      } else {
+        const suffixLength = Number(match[2]);
+        start = Math.max(size - suffixLength, 0);
+      }
+      if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start > end || start >= size) {
+        return new Response(null, {
+          status: 416,
+          headers: { "Content-Range": `bytes */${size}` },
+        });
+      }
+      status = 206;
+    }
+
+    const headers = new Headers({
+      "Content-Type": contentType,
+      "Accept-Ranges": "bytes",
+      "Content-Length": String(end - start + 1),
+      "Cache-Control": "private, no-store",
+    });
+    if (status === 206) headers.set("Content-Range", `bytes ${start}-${end}/${size}`);
+    const stream = createReadStream(localPath, { start, end });
+    return new Response(Readable.toWeb(stream) as ReadableStream<Uint8Array>, {
+      status,
+      headers,
+    });
+  } catch {
+    return new Response("Not found", { status: 404 });
+  }
+}
+
+/** Authenticated video streaming for uploaded media and Recall bot recordings. */
 export async function GET(
   req: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -57,6 +117,7 @@ export async function GET(
   if (!meeting || !canViewMeeting(meeting, user)) {
     return new Response("Not found", { status: 404 });
   }
+  if (meeting.videoPath) return serveUploadedVideo(req, meeting.videoPath);
   if (!recallEnabled()) return new Response("Not found", { status: 404 });
 
   // Only bot-captured meetings have video. A phone or browser recording is

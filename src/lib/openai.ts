@@ -118,6 +118,77 @@ function getMinutesProvider(): MinutesProvider {
   return process.env.OPENAI_API_KEY ? "openai" : "ollama";
 }
 
+export type MeetingChatMessage = {
+  role: "user" | "assistant";
+  content: string;
+};
+
+export async function answerMeetingQuestion(
+  meetingId: string,
+  systemPrompt: string,
+  history: MeetingChatMessage[],
+): Promise<string> {
+  const provider = getMinutesProvider();
+  if (provider === "demo") {
+    throw new Error(
+      "Meeting chat needs an AI provider. Configure Ollama or OpenAI to use it.",
+    );
+  }
+
+  const messages = [
+    { role: "system" as const, content: systemPrompt },
+    ...history,
+  ];
+
+  if (provider === "openai") {
+    const completion = await runChat(
+      "meeting_chat",
+      {
+        model: "gpt-4o",
+        temperature: 0.2,
+        messages,
+      },
+      meetingId,
+    );
+    const content = completion.choices[0]?.message?.content;
+    if (typeof content !== "string" || !content.trim()) {
+      throw new Error("OpenAI returned an empty response");
+    }
+    return content.trim();
+  }
+
+  const baseUrl = (
+    process.env.OLLAMA_BASE_URL ?? "http://127.0.0.1:11434"
+  ).replace(/\/+$/, "");
+  const model = process.env.OLLAMA_MODEL ?? "qwen2.5:7b";
+  let response: Response;
+  try {
+    response = await fetch(`${baseUrl}/api/chat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ model, messages, stream: false }),
+      signal: AbortSignal.timeout(120_000),
+    });
+  } catch (error) {
+    throw new Error(
+      `Could not connect to Ollama at ${baseUrl}. Start Ollama and make sure the "${model}" model is installed.`,
+      { cause: error },
+    );
+  }
+  if (!response.ok) {
+    const details = await response.text();
+    throw new Error(
+      `Ollama meeting chat failed (${response.status}): ${details || response.statusText}`,
+    );
+  }
+  const result = (await response.json()) as OllamaChatResponse;
+  const content = result.message?.content;
+  if (typeof content !== "string" || !content.trim()) {
+    throw new Error(`Ollama model "${model}" returned an empty response`);
+  }
+  return content.trim();
+}
+
 async function runMinutesChat(
   operation: string,
   params: ChatCompletionCreateParamsNonStreaming,

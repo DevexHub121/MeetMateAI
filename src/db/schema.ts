@@ -10,6 +10,7 @@ import {
   doublePrecision,
   real,
   vector,
+  unique,
 } from "drizzle-orm/pg-core";
 import { organizations, users } from "./schema-auth";
 
@@ -28,6 +29,26 @@ export const meetingStatus = pgEnum("meeting_status", [
   "failed",
 ]);
 
+export const meetingFolders = pgTable(
+  "meeting_folders",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: uuid("org_id")
+      .references(() => organizations.id, { onDelete: "cascade" })
+      .notNull(),
+    name: text("name").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => ({
+    uniqueOrgFolderName: unique("meeting_folders_org_name_unique").on(
+      t.orgId,
+      t.name,
+    ),
+  }),
+);
+
 export const meetings = pgTable("meetings", {
   id: uuid("id").primaryKey().defaultRandom(),
   title: text("title").notNull(),
@@ -45,9 +66,13 @@ export const meetings = pgTable("meetings", {
   // meeting filters on it. Deleting an org cascades its meetings away rather
   // than orphaning them (and their stored recordings).
   orgId: uuid("org_id").references(() => organizations.id, { onDelete: "cascade" }),
+  folderId: uuid("folder_id").references(() => meetingFolders.id, {
+    onDelete: "set null",
+  }),
   meetingDate: timestamp("meeting_date", { withTimezone: true }),
   invitees: jsonb("invitees").$type<Invitee[]>(), // manual participant list (Bitrix later)
   recordingPath: text("recording_path"),
+  videoPath: text("video_path"),
   // Audio segments extracted from very large recordings. Each entry stores
   // the persisted path and its position in the source recording.
   recordingSegments: jsonb("recording_segments").$type<RecordingSegment[] | null>(),

@@ -1,7 +1,23 @@
 import { db } from "@/db";
-import { meetings, type Meeting, type MeetingType } from "@/db/schema";
+import {
+  meetingFolders,
+  meetings,
+  type Meeting,
+  type MeetingType,
+} from "@/db/schema";
 import { getCurrentUser, type SessionUser } from "@/lib/auth";
-import { and, count, desc, eq, ilike, or, sql, type SQL } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  ilike,
+  isNull,
+  or,
+  sql,
+  type SQL,
+} from "drizzle-orm";
 
 /**
  * Tenant boundary. A meeting belongs to an organization, and every member of
@@ -28,6 +44,8 @@ export type MeetingSummary = Pick<
   | "createdAt"
   | "hostName"
   | "invitees"
+  | "folderId"
+  | "orgId"
 >;
 
 /** Every column the list page renders, and not one byte more. */
@@ -40,6 +58,8 @@ const SUMMARY_COLUMNS = {
   createdAt: meetings.createdAt,
   hostName: meetings.hostName,
   invitees: meetings.invitees,
+  folderId: meetings.folderId,
+  orgId: meetings.orgId,
 } as const;
 
 /**
@@ -59,6 +79,8 @@ export type MeetingListFilters = {
   participant?: string | null;
   /** Orbit user id, or "none" for the legacy rows that have no owner. Superadmin only. */
   createdBy?: string | null;
+  /** A folder id or "unfiled". */
+  folder?: string | null;
 };
 
 const UUID_RE =
@@ -136,6 +158,12 @@ function filterConditions(
       // empty result.
       conditions.push(eq(meetings.createdByUserId, f.createdBy));
     }
+  }
+
+  if (f.folder === "unfiled") {
+    conditions.push(isNull(meetings.folderId));
+  } else if (f.folder && UUID_RE.test(f.folder)) {
+    conditions.push(eq(meetings.folderId, f.folder));
   }
 
   return conditions;
@@ -326,6 +354,35 @@ export async function listMeetingFilterOptions(
       .sort(byName),
     creators: [...creators].map(([id, v]) => ({ id, ...v })).sort(byName),
   };
+}
+
+export type MeetingFolder = {
+  id: string;
+  name: string;
+  orgId: string;
+};
+
+export async function listMeetingFolders(
+  viewer: Pick<SessionUser, "role" | "org">,
+): Promise<MeetingFolder[]> {
+  const rows = await db
+    .select({
+      id: meetingFolders.id,
+      name: meetingFolders.name,
+      orgId: meetingFolders.orgId,
+    })
+    .from(meetingFolders)
+    .where(
+      viewer.role === "superadmin"
+        ? undefined
+        : eq(
+            meetingFolders.orgId,
+            viewer.org?.id ?? "00000000-0000-0000-0000-000000000000",
+          ),
+    )
+    .orderBy(asc(meetingFolders.name));
+
+  return rows;
 }
 
 
