@@ -36,6 +36,20 @@
       "when": 1792482640181,
       "tag": "0004_sour_otto_octavius",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1792735537670,
+      "tag": "0005_melodic_mimic",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792749725189,
+      "tag": "0006_supreme_madame_masque",
+      "breakpoints": true
     }
   ]
 }

@@ -1,11 +1,20 @@
 import Link from "next/link";
-import { listMeetingFilterOptions, listMeetingPage } from "@/lib/meetings";
+import {
+  listMeetingFilterOptions,
+  listMeetingFolders,
+  listMeetingPage,
+} from "@/lib/meetings";
 import { requireUser } from "@/lib/auth";
 import { StatusBadge } from "@/components/StatusBadge";
 import Image from "next/image";
 import { istDayKey, istDayLabel, formatISTTime, isUpcoming } from "@/lib/datetime";
 import type { MeetingType } from "@/db/schema";
 import { MeetingFilters } from "./MeetingFilters";
+import { createMeetingFolder } from "./actions";
+import {
+  MeetingFolderActions,
+  MeetingFolderSelector,
+} from "./MeetingFolderControls";
 
 export const dynamic = "force-dynamic";
 
@@ -26,9 +35,10 @@ export default async function MeetingsPage({
     to?: string;
     participant?: string;
     by?: string;
+    folder?: string;
   }>;
 }) {
-  const { type, page, q, from, to, participant, by } = await searchParams;
+  const { type, page, q, from, to, participant, by, folder } = await searchParams;
   const active: "all" | MeetingType =
     type === "internal" || type === "client" ? type : "all";
 
@@ -45,12 +55,19 @@ export default async function MeetingsPage({
     to: to ?? "",
     participant: participant ?? "",
     createdBy: showHost ? (by ?? "") : "",
+    folder:
+      folder === "unfiled" ||
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        folder ?? "",
+      )
+        ? folder
+        : "",
   };
 
   // Paginated and counted in SQL. Doing it here in JS meant fetching every
   // meeting — transcripts included — to display ten titles.
   const PAGE_SIZE = 10;
-  const [{ rows, counts, totalPages, currentPage }, options] = await Promise.all([
+  const [{ rows, counts, totalPages, currentPage }, options, folders] = await Promise.all([
     listMeetingPage(user, {
       type: active,
       page: Number(page) || 1,
@@ -58,6 +75,7 @@ export default async function MeetingsPage({
       ...filters,
     }),
     listMeetingFilterOptions(user),
+    listMeetingFolders(user),
   ]);
   const shownCount = active === "all" ? counts.all : counts[active];
   const filtered = Object.values(filters).some(Boolean);
@@ -72,6 +90,7 @@ export default async function MeetingsPage({
     if (filters.to) params.set("to", filters.to);
     if (filters.participant) params.set("participant", filters.participant);
     if (filters.createdBy) params.set("by", filters.createdBy);
+    if (filters.folder) params.set("folder", filters.folder);
     for (const [k, v] of Object.entries(over)) {
       if (v) params.set(k, v);
       else params.delete(k);
@@ -178,6 +197,74 @@ export default async function MeetingsPage({
         </section>
       )}
 
+      <section
+        className="mb-5 flex flex-wrap items-center gap-2 rounded-2xl p-3.5"
+        style={{ background: "var(--d-soft)", border: "1px solid var(--d-border)" }}
+        aria-label="Meeting folders"
+      >
+        <Link
+          href={withParams({ folder: "", page: "" })}
+          aria-current={!filters.folder ? "page" : undefined}
+          className="rounded-full px-3 py-1.5 text-[13px] font-medium"
+          style={!filters.folder ? { background: "var(--d-ink)", color: "#fff" } : { color: "var(--d-text)" }}
+        >
+          All
+        </Link>
+        <Link
+          href={withParams({ folder: "unfiled", page: "" })}
+          aria-current={filters.folder === "unfiled" ? "page" : undefined}
+          className="rounded-full px-3 py-1.5 text-[13px] font-medium"
+          style={filters.folder === "unfiled" ? { background: "var(--d-ink)", color: "#fff" } : { color: "var(--d-text)" }}
+        >
+          Unfiled
+        </Link>
+        {folders.map((folderOption) => (
+          <div
+            key={folderOption.id}
+            className="inline-flex items-center gap-1 rounded-full"
+            style={
+              filters.folder === folderOption.id
+                ? { background: "var(--d-ink)", color: "#fff" }
+                : { color: "var(--d-text)" }
+            }
+          >
+            <Link
+              href={withParams({ folder: folderOption.id, page: "" })}
+              aria-current={filters.folder === folderOption.id ? "page" : undefined}
+              className="rounded-full py-1.5 pl-3 pr-1 text-[13px] font-medium"
+            >
+              {folderOption.name}
+            </Link>
+            {user.org?.id === folderOption.orgId && (
+              <MeetingFolderActions
+                folderId={folderOption.id}
+                name={folderOption.name}
+                active={filters.folder === folderOption.id}
+              />
+            )}
+          </div>
+        ))}
+        {user.org && (
+          <form action={createMeetingFolder} className="ml-auto flex items-center gap-2">
+            <input
+              name="name"
+              required
+              maxLength={100}
+              aria-label="New folder name"
+              placeholder="New folder name"
+              className="d-input w-40 px-3 text-sm"
+            />
+            <button
+              type="submit"
+              className="rounded-full px-3 py-1.5 text-[13px] font-semibold text-white"
+              style={{ background: "var(--d-ai-grad)" }}
+            >
+              + New folder
+            </button>
+          </form>
+        )}
+      </section>
+
       <MeetingFilters
         values={{ type: active, ...filters }}
         options={options}
@@ -250,25 +337,21 @@ export default async function MeetingsPage({
               </div>
 
               {g.items.map((m) => (
-                <Link
+                <div
                   key={m.id}
-                  href={`/meetings/${m.id}`}
-                  /* Link, not <a>: a bare anchor threw away the whole document
-                     and rebuilt it — new HTML, new JS, a blank screen for the
-                     duration. Link keeps the shell mounted and prefetches. */
                   className="group grid items-center gap-4 px-4 py-3 transition-colors hover:bg-[var(--d-soft)]"
                   style={{ gridTemplateColumns: showHost ? "2.6fr 1.1fr 1fr 1.1fr 76px" : "2.6fr 1.1fr 1.1fr 76px", borderBottom: "1px solid var(--d-border)" }}
                 >
-                  <span className="flex min-w-0 items-center gap-3">
+                  <div className="flex min-w-0 items-center gap-3">
                     <span
                       className="grid h-9 w-9 shrink-0 place-items-center rounded-[10px] text-[var(--d-muted)] transition-colors group-hover:text-[var(--d-ink)]"
                       style={{ background: "rgba(15,29,69,.05)" }}
                     >
                       <MicIcon />
                     </span>
-                    <span className="min-w-0 truncate text-[15px] font-semibold text-[var(--d-ink)]">
+                    <Link href={`/meetings/${m.id}`} className="min-w-0 truncate text-[15px] font-semibold text-[var(--d-ink)]">
                       {m.title}
-                    </span>
+                    </Link>
                     <span
                       className="hidden shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium sm:inline"
                       style={
@@ -279,7 +362,18 @@ export default async function MeetingsPage({
                     >
                       {m.type === "client" ? "Client" : "Internal"}
                     </span>
-                  </span>
+                    {folders.some((folderOption) => folderOption.orgId === m.orgId) && (
+                      <MeetingFolderSelector
+                        key={`${m.id}:${m.folderId ?? "unfiled"}`}
+                        meetingId={m.id}
+                        folderId={m.folderId}
+                        meetingTitle={m.title}
+                        folders={folders
+                          .filter((folderOption) => folderOption.orgId === m.orgId)
+                          .map(({ id, name }) => ({ id, name }))}
+                      />
+                    )}
+                  </div>
 
                   <span className="hidden md:block">
                     {m.invitees && m.invitees.length ? (
@@ -315,7 +409,7 @@ export default async function MeetingsPage({
                   <span className="hidden text-right font-mono text-[12px] text-[var(--d-muted)] md:block">
                     {formatISTTime(m.meetingDate ?? m.createdAt)}
                   </span>
-                </Link>
+                </div>
               ))}
             </div>
           ))}

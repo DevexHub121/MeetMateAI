@@ -68,6 +68,49 @@ function SubmitButton({
   );
 }
 
+function UploadProgress({
+  largePending = false,
+  status,
+}: {
+  largePending?: boolean;
+  status?: string | null;
+}) {
+  const { pending } = useFormStatus();
+  const active = pending || largePending;
+
+  if (!active) {
+    return status ? (
+      <p className="mt-3 text-sm text-red-400" role="alert">{status}</p>
+    ) : null;
+  }
+
+  return (
+    <div
+      className="mt-4 flex items-center gap-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-muted-surface)] p-4"
+      role="status"
+      aria-live="polite"
+    >
+      <span className="h-5 w-5 shrink-0 animate-spin rounded-full border-2 border-[var(--color-border-strong)] border-t-[var(--color-heading)]" />
+      <div className="min-w-0">
+        <p className="text-sm font-semibold text-[var(--color-heading)]">
+          {status ?? "Uploading and analyzing your meeting recording…"}
+        </p>
+        <p className="mt-0.5 text-xs text-[var(--color-text-muted)]">
+          Keep this page open while the recording is uploaded and analyzed.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function SparkleIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M12 2l1.6 5.2a4 4 0 0 0 2.6 2.6L21.4 12l-5.2 1.6a4 4 0 0 0-2.6 2.6L12 21.4l-1.6-5.2a4 4 0 0 0-2.6-2.6L2.6 12l5.2-1.6a4 4 0 0 0 2.6-2.6L12 2z" />
+    </svg>
+  );
+}
+
 export function NewMeetingForm({
   saved,
   employees,
@@ -131,6 +174,7 @@ export function NewMeetingForm({
               `Chunk ${seq + 1} upload failed after 3 attempts (${uploadFailure})`,
             );
           }
+
         }
         setLargeUploadStatus("Processing recording…");
         await finalizeChunkedRecording(meetingId, partCount, ext, null);
@@ -656,9 +700,6 @@ export function NewMeetingForm({
         </p>
 
         <div className={importTab === "file" ? "" : "hidden"}>
-          {largeUploadStatus && (
-            <p className="mb-3 text-sm text-[var(--color-text-secondary)]">{largeUploadStatus}</p>
-          )}
           <div className="flex flex-wrap items-center gap-3">
             <input
               type="file"
@@ -669,14 +710,15 @@ export function NewMeetingForm({
               }
               className="block max-w-full text-sm text-[var(--color-text-secondary)] file:mr-4 file:rounded-md file:border-0 file:bg-[var(--color-elevated)] file:px-4 file:py-2 file:text-sm file:font-medium file:text-[var(--color-heading)] hover:file:bg-[var(--color-border-strong)]"
             />
-            <button
-              type="submit"
+            <SubmitButton
               formAction={createAndUploadFile}
               disabled={!importFileName}
-              className="btn-primary disabled:cursor-not-allowed disabled:opacity-50"
+              className="btn-primary inline-flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-50"
+              pendingLabel="Uploading & analyzing…"
             >
+              <SparkleIcon />
               Analyze file
-            </button>
+            </SubmitButton>
           </div>
         </div>
 
@@ -690,16 +732,21 @@ export function NewMeetingForm({
               placeholder="https://…/recording.mp3"
               className="min-w-0 flex-1 rounded-lg border border-[var(--color-border)] bg-[var(--color-muted-surface)] px-3 py-2 text-sm text-[var(--color-heading)] placeholder:text-[var(--color-text-muted)] shadow-sm outline-none transition-colors focus:border-[var(--color-border-strong)] focus:ring-1 focus:ring-[var(--color-border-strong)]"
             />
-            <button
-              type="submit"
+            <SubmitButton
               formAction={createAndImportUrl}
               disabled={!importUrl.trim()}
-              className="btn-primary disabled:cursor-not-allowed disabled:opacity-50"
+              className="btn-primary inline-flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-50"
+              pendingLabel="Fetching & analyzing…"
             >
+              <SparkleIcon />
               Analyze URL
-            </button>
+            </SubmitButton>
           </div>
         </div>
+        <UploadProgress
+          largePending={isPending}
+          status={largeUploadStatus}
+        />
       </div>
     </form>
   );

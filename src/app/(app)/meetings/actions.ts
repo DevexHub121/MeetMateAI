@@ -3,6 +3,7 @@
 import { db } from "@/db";
 import {
   meetings,
+  meetingFolders,
   savedParticipants,
   type Invitee,
   type SpeakerMap,
@@ -50,6 +51,109 @@ import { readStoredFile, localStoredFilePath } from "@/lib/storage";
 const execFileAsync = promisify(execFile);
 
 const SEGMENT_SECONDS = 10 * 60;
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export async function createMeetingFolder(formData: FormData) {
+  const user = await getCurrentUser();
+  if (!user) throw new Error("Not signed in");
+  if (!user.org) throw new Error("A folder can only be created inside an organization");
+
+  const name = String(formData.get("name") ?? "").trim();
+  if (!name || name.length > 100) {
+    throw new Error("Folder names must be between 1 and 100 characters");
+  }
+
+  const existing = await db
+    .select({ id: meetingFolders.id })
+    .from(meetingFolders)
+    .where(
+      and(
+        eq(meetingFolders.orgId, user.org.id),
+        eq(meetingFolders.name, name),
+      ),
+    )
+    .limit(1);
+  if (existing.length) throw new Error("A folder with that name already exists");
+
+  await db.insert(meetingFolders).values({ orgId: user.org.id, name });
+  revalidatePath("/meetings");
+}
+
+export async function moveMeetingToFolder(meetingId: string, folderId: string) {
+  if (!UUID_RE.test(meetingId)) throw new Error("Invalid meeting");
+  if (folderId && !UUID_RE.test(folderId)) throw new Error("Invalid folder");
+  const { meeting } = await requireMeetingAccess(meetingId);
+
+  if (!meeting.orgId) throw new Error("This meeting is not associated with an organization");
+
+  if (folderId) {
+    const folder = await db
+      .select({ id: meetingFolders.id })
+      .from(meetingFolders)
+      .where(
+        and(
+          eq(meetingFolders.id, folderId),
+          eq(meetingFolders.orgId, meeting.orgId),
+        ),
+      )
+      .limit(1);
+    if (!folder.length) throw new Error("Folder not found");
+  }
+
+  await db
+    .update(meetings)
+    .set({ folderId: folderId || null })
+    .where(eq(meetings.id, meeting.id));
+
+  revalidatePath("/meetings");
+}
+
+export async function renameMeetingFolder(folderId: string, name: string) {
+  const user = await getCurrentUser();
+  if (!user) throw new Error("Not signed in");
+  if (!user.org) throw new Error("A folder can only be renamed inside an organization");
+  if (!UUID_RE.test(folderId)) throw new Error("Invalid folder");
+
+  const cleanName = name.trim();
+  if (!cleanName || cleanName.length > 100) {
+    throw new Error("Folder names must be between 1 and 100 characters");
+  }
+
+  const [updated] = await db
+    .update(meetingFolders)
+    .set({ name: cleanName })
+    .where(
+      and(
+        eq(meetingFolders.id, folderId),
+        eq(meetingFolders.orgId, user.org.id),
+      ),
+    )
+    .returning({ id: meetingFolders.id });
+  if (!updated) throw new Error("Folder not found");
+
+  revalidatePath("/meetings");
+}
+
+export async function deleteMeetingFolder(folderId: string) {
+  const user = await getCurrentUser();
+  if (!user) throw new Error("Not signed in");
+  if (!user.org) throw new Error("A folder can only be deleted inside an organization");
+  if (!UUID_RE.test(folderId)) throw new Error("Invalid folder");
+
+  const [deleted] = await db
+    .delete(meetingFolders)
+    .where(
+      and(
+        eq(meetingFolders.id, folderId),
+        eq(meetingFolders.orgId, user.org.id),
+      ),
+    )
+    .returning({ id: meetingFolders.id });
+  if (!deleted) throw new Error("Folder not found");
+
+  revalidatePath("/meetings");
+}
 
 // Speech-focused filter chain.  The high/low-pass filters remove rumble and
 // ultrasonic noise, afftdn suppresses steady background hiss, and loudnorm
@@ -153,6 +257,11 @@ function parseClientName(formData: FormData): string | null {
   return raw || null;
 }
 
+function isVideoRecording(file: File, extension: string): boolean {
+  if (file.type.startsWith("video/")) return true;
+  return ["mp4", "m4v", "mov", "avi", "mkv", "ogv"].includes(extension);
+}
+
 function titleOrDefault(formData: FormData, when: Date): string {
   const raw = String(formData.get("title") ?? "").trim();
   if (raw) return raw;
@@ -253,11 +362,15 @@ export async function renameMeeting(meetingId: string, title: string) {
 export async function deleteMeeting(meetingId: string) {
   const { meeting } = await requireMeetingAccess(meetingId);
 
-  if (meeting.recordingPath) {
+  const storedPaths = [
+    meeting.recordingPath,
+    meeting.videoPath,
+  ].filter((filePath): filePath is string => Boolean(filePath));
+  if (storedPaths.length > 0) {
     try {
-      await deleteStoredFile(meeting.recordingPath);
+      await deleteStoredFiles([...new Set(storedPaths)]);
     } catch (err) {
-      // An orphaned audio file is fine; the row removal is what matters.
+      // Orphaned media is fine; the row removal is what matters.
       console.error("[storage] Failed to delete recording:", err);
     }
   }
@@ -363,6 +476,7 @@ export async function saveMeetingRecording(
   // bytes match the extension — otherwise <audio> can't read duration/seek and
   // Deepgram has to guess the container. Falls back to webm (the common case).
   const ext = (file.name.split(".").pop() || "webm").toLowerCase();
+  const isVideo = isVideoRecording(file, ext);
   const saved = await saveFile("recordings", `${meetingId}.${ext}`, bytes);
   // Every finalized recording (uploaded video, imported audio, or microphone
   // WebM) is normalized before transcription.  Previously this branch only ran
@@ -370,6 +484,7 @@ export async function saveMeetingRecording(
   // reduction and loudness normalization.
   let recordingPath = saved.relativePath;
   let recordingSegments = null;
+  const videoPath = isVideo ? saved.relativePath : null;
   try {
     if (file.size > 100 * 1024 * 1024) {
       await db.update(meetings).set({ processingStage: "extracting", processingProgress: 0, processingTotal: 1 }).where(eq(meetings.id, meetingId));
@@ -380,7 +495,7 @@ export async function saveMeetingRecording(
       // an hour-long upload appear as a ten-minute recording in the player.
     } else {
       recordingPath = await extractSpeechAudio(saved.relativePath, meetingId);
-      await deleteStoredFile(saved.relativePath);
+      if (!isVideo) await deleteStoredFile(saved.relativePath);
     }
   } catch (err) {
     // Keep the existing fallback: an unusual container or an unavailable
@@ -394,6 +509,7 @@ export async function saveMeetingRecording(
       ...CLEARED_BY_NEW_RECORDING,
       recordingPath,
       recordingSegments,
+      videoPath,
       durationSeconds,
       status: "recorded",
     })
@@ -688,6 +804,10 @@ const AUDIO_EXT_BY_TYPE: Record<string, string> = {
   "audio/x-wav": "wav",
   "video/mp4": "mp4",
   "video/webm": "webm",
+  "video/quicktime": "mov",
+  "video/x-msvideo": "avi",
+  "video/x-matroska": "mkv",
+  "video/ogg": "ogv",
 };
 
 // Import a recording from a URL: download it, store it, then run the same
@@ -721,10 +841,25 @@ export async function ingestRecordingFromUrl(meetingId: string, url: string) {
 
   // Prefer the URL's extension; fall back to the content-type; else mp3.
   const urlExt = clean.split("?")[0].split(".").pop()?.toLowerCase() ?? "";
-  const known = ["webm", "ogg", "mp3", "m4a", "mp4", "wav"];
+  const known = [
+    "webm",
+    "ogg",
+    "mp3",
+    "m4a",
+    "mp4",
+    "m4v",
+    "mov",
+    "avi",
+    "mkv",
+    "ogv",
+    "wav",
+  ];
   const ext = known.includes(urlExt)
     ? urlExt
     : (AUDIO_EXT_BY_TYPE[contentType] ?? "mp3");
+  const isVideo =
+    contentType.startsWith("video/") ||
+    ["mp4", "m4v", "mov", "avi", "mkv", "ogv"].includes(ext);
 
   // Streamed, not buffered. This had no size cap and no timeout at all, which
   // made a long imported recording the easiest way to OOM the server.
@@ -734,11 +869,36 @@ export async function ingestRecordingFromUrl(meetingId: string, url: string) {
     clean,
   );
 
+  let recordingPath = saved.relativePath;
+  let recordingSegments = null;
+  if (isVideo) {
+    try {
+      const size = await storedFileSize(saved.relativePath);
+      if (size !== null && size > 100 * 1024 * 1024) {
+        await db
+          .update(meetings)
+          .set({ processingStage: "extracting", processingProgress: 0, processingTotal: 1 })
+          .where(eq(meetings.id, meetingId));
+        recordingSegments = await extractSpeechAudioSegments(saved.relativePath, meetingId);
+        await db
+          .update(meetings)
+          .set({ processingStage: "extracting", processingProgress: 1, processingTotal: 1 })
+          .where(eq(meetings.id, meetingId));
+      } else {
+        recordingPath = await extractSpeechAudio(saved.relativePath, meetingId);
+      }
+    } catch (err) {
+      console.warn("[media] video audio extraction failed; using original recording:", err);
+    }
+  }
+
   await db
     .update(meetings)
     .set({
       ...CLEARED_BY_NEW_RECORDING,
-      recordingPath: saved.relativePath,
+      recordingPath,
+      recordingSegments,
+      videoPath: isVideo ? saved.relativePath : null,
       durationSeconds: null,
       status: "recorded",
     })

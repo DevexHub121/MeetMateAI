@@ -19,7 +19,7 @@ export function KeyMoments({ moments }: { moments: MeetingKeyMoment[] }) {
   return (
     <section className="card p-5">
       <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
-        Key moments
+        Highlights
       </h2>
       <p className="mb-3 text-xs text-[var(--color-text-muted)]">
         Prioritized discussion topics. Select a timestamp to jump to that point

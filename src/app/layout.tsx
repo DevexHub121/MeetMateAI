@@ -37,6 +37,7 @@ export default function RootLayout({
     <html
       lang="en"
       className={`${display.variable} ${instrument.variable} ${jetbrains.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
       <body className="min-h-full text-[var(--color-text-primary)]">
         {children}

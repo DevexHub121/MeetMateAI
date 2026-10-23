@@ -22,10 +22,12 @@ function clock(seconds: number): string {
  */
 export function AudioPlayer({
   src,
+  active = true,
   /** Duration we already know from the DB, as a string of seconds. */
   fallbackDuration,
 }: {
   src: string;
+  active?: boolean;
   fallbackDuration?: string | null;
 }) {
   const ref = useRef<HTMLAudioElement>(null);
@@ -112,12 +114,16 @@ export function AudioPlayer({
 
   const progress = total > 0 ? (current / total) * 100 : 0;
 
+  useEffect(() => {
+    if (!active) ref.current?.pause();
+  }, [active]);
+
   return (
     <div
       ref={playerRef}
       className="rounded-xl border border-[var(--color-border)] bg-[var(--color-muted-surface)] px-4 py-3"
     >
-      <audio ref={ref} src={src} preload="metadata" className="hidden" />
+      <audio ref={ref} src={src} preload="auto" className="hidden" />
 
       {failed ? (
         <p className="py-1 text-sm text-[var(--color-text-secondary)]">

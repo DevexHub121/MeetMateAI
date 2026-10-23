@@ -26,24 +26,41 @@ import { RECORDING_SEEK_EVENT } from "./recordingSeek";
 export function RecordingMedia({
   audioSrc,
   videoSrc,
+  preferVideo = false,
   fallbackDuration,
 }: {
   audioSrc: string;
-  /** Omitted for meetings no bot attended — those are audio-only, and the
-      toggle doesn't render at all. */
+  /** Omitted for audio-only meetings. */
   videoSrc?: string;
+  /** Uploaded video should be the initial view; bot video stays optional. */
+  preferVideo?: boolean;
   fallbackDuration?: string | null;
 }) {
-  const [tab, setTab] = useState<"audio" | "video">("audio");
+  const [tab, setTab] = useState<"audio" | "video">(preferVideo ? "video" : "audio");
   const [videoFailed, setVideoFailed] = useState(false);
+  const [videoLoading, setVideoLoading] = useState(preferVideo);
   const videoRef = useRef<HTMLVideoElement>(null);
   const pendingSeek = useRef<number | null>(null);
+
+  const selectTab = useCallback((next: "audio" | "video") => {
+    if (next === "video") {
+      setVideoLoading(
+        !videoRef.current ||
+          videoRef.current.readyState < HTMLMediaElement.HAVE_FUTURE_DATA,
+      );
+    }
+    setTab(next);
+  }, []);
+
+  useEffect(() => {
+    if (tab !== "video") videoRef.current?.pause();
+  }, [tab]);
 
   const seekVideo = useCallback((timeSeconds: number) => {
     const video = videoRef.current;
     if (!video || video.readyState < 1) {
       pendingSeek.current = timeSeconds;
-      setTab("video");
+      selectTab("video");
       return;
     }
     video.currentTime = Number.isFinite(video.duration)
@@ -51,7 +68,7 @@ export function RecordingMedia({
       : timeSeconds;
     pendingSeek.current = null;
     video.scrollIntoView({ behavior: "smooth", block: "center" });
-  }, []);
+  }, [selectTab]);
 
   useEffect(() => {
     if (!videoSrc) return;
@@ -60,14 +77,14 @@ export function RecordingMedia({
         ?.timeSeconds;
       if (typeof timeSeconds !== "number" || !Number.isFinite(timeSeconds)) return;
       if (videoFailed) {
-        setTab("audio");
+        selectTab("audio");
         return;
       }
       seekVideo(timeSeconds);
     };
     window.addEventListener(RECORDING_SEEK_EVENT, onSeek);
     return () => window.removeEventListener(RECORDING_SEEK_EVENT, onSeek);
-  }, [seekVideo, videoSrc, videoFailed]);
+  }, [seekVideo, selectTab, videoSrc, videoFailed]);
 
   if (!videoSrc) {
     return <AudioPlayer src={audioSrc} fallbackDuration={fallbackDuration} />;
@@ -76,52 +93,82 @@ export function RecordingMedia({
   return (
     <div className="space-y-3">
       <div className="flex w-fit gap-1 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-1">
-        <TabButton active={tab === "audio"} onClick={() => setTab("audio")}>
+        <TabButton active={tab === "audio"} onClick={() => selectTab("audio")}>
           Audio
         </TabButton>
-        <TabButton active={tab === "video"} onClick={() => setTab("video")}>
+        <TabButton active={tab === "video"} onClick={() => selectTab("video")}>
           Video
         </TabButton>
       </div>
 
-      {tab === "audio" ? (
-        <AudioPlayer src={audioSrc} fallbackDuration={fallbackDuration} />
-      ) : videoFailed ? (
-        <p className="text-sm text-[var(--color-text-muted)]">
-          The video isn&rsquo;t available for this meeting.{" "}
-          <button
-            type="button"
-            onClick={() => setTab("audio")}
-            className="underline underline-offset-2 hover:text-[var(--color-heading)]"
+      <div className="relative">
+        <div
+          className={tab === "audio" ? "" : "pointer-events-none absolute inset-0 -z-10 opacity-0"}
+          aria-hidden={tab !== "audio"}
+        >
+          <AudioPlayer
+            src={audioSrc}
+            active={tab === "audio"}
+            fallbackDuration={fallbackDuration}
+          />
+        </div>
+        {videoFailed ? (
+          tab === "video" && (
+            <p className="text-sm text-[var(--color-text-muted)]">
+              The video isn&rsquo;t available for this meeting.{" "}
+              <button
+                type="button"
+                onClick={() => selectTab("audio")}
+                className="underline underline-offset-2 hover:text-[var(--color-heading)]"
+              >
+                Play the audio instead
+              </button>
+            </p>
+          )
+        ) : (
+          // Keep the video mounted and preloading while the audio tab is active,
+          // but remove it from layout and interaction until the user switches.
+          <div
+            className={`flex justify-center ${
+              tab === "video"
+                ? "relative"
+                : "pointer-events-none absolute inset-0 -z-10 opacity-0"
+            }`}
+            aria-hidden={tab !== "video"}
           >
-            Play the audio instead
-          </button>
-        </p>
-      ) : (
-        // Native controls here, unlike the audio player: video chrome is
-        // fullscreen, picture-in-picture and a scrub bar with frame previews,
-        // and reimplementing that badly is worse than a control strip that
-        // doesn't match the theme.
-        //
-        // preload="auto", not "metadata": this element only mounts once
-        // someone has picked the Video tab, so the intent to watch is already
-        // expressed and there is nothing to be coy about. Waiting for the play
-        // click to start buffering a 140 MB file just moves the wait somewhere
-        // more annoying. Nothing is fetched at all until the tab is picked,
-        // which is the saving that actually mattered.
-        <video
-          ref={videoRef}
-          src={videoSrc}
-          controls
-          playsInline
-          preload="auto"
-          onLoadedMetadata={() => {
-            if (pendingSeek.current !== null) seekVideo(pendingSeek.current);
-          }}
-          onError={() => setVideoFailed(true)}
-          className="w-full rounded-lg border border-[var(--color-border)] bg-black"
-        />
-      )}
+            <video
+              ref={videoRef}
+              src={videoSrc}
+              controls
+              playsInline
+              preload="auto"
+              onLoadStart={() => setVideoLoading(true)}
+              onLoadedMetadata={() => {
+                if (pendingSeek.current !== null) seekVideo(pendingSeek.current);
+              }}
+              onCanPlay={() => setVideoLoading(false)}
+              onPlaying={() => setVideoLoading(false)}
+              onWaiting={() => {
+                if (tab === "video") setVideoLoading(true);
+              }}
+              onError={() => {
+                setVideoLoading(false);
+                setVideoFailed(true);
+              }}
+              className="aspect-video max-h-[400px] w-full max-w-full rounded-lg border border-[var(--color-border)] bg-black object-contain"
+            />
+            {tab === "video" && videoLoading && (
+              <div
+                className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-lg bg-black/35"
+                role="status"
+                aria-label="Loading video"
+              >
+                <span className="h-8 w-8 animate-spin rounded-full border-2 border-white/35 border-t-white" />
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
